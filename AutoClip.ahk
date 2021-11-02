@@ -10,10 +10,17 @@ SetWorkingDir %A_ScriptDir%
 
 global hotstrings := {}
 
+PadCommand(commandButLocal) {
+    commandButLocal := ":o:" . commandButLocal
+    return commandButLocal
+}
+
 AddHotstring(command, content) {
+    command := PadCommand(command)
     if (!hotstrings.HasKey(command)) {
         hotstrings[command] := content
         HotString(command, content)
+        UpdateFile()
     }
 }
 
@@ -24,9 +31,9 @@ ReadFile() {
     for index, macro in StrSplit(macros, "`n") {
         tempData := StrSplit(macro, "|")
         if (tempData.Length() == 2) {
-            command := tempData[1]
-            content := tempData[2]
-            AddHotstring(command, content)
+            commandButRead := tempData[1]
+            contentButRead := tempData[2]
+            AddHotstring(commandButRead, contentButRead)
         }
     }
 }
@@ -39,8 +46,32 @@ UpdateFile() {
     file.close()
 }
 
+AddMacro() {
+    tooltip, ok
+}
+
+MakeTrayMenu() {
+    Menu, Tray, Add, Add Macro, AddMacro
+    Menu, Tray, Add, Remove Macro, OpenRemoveMenu
+}
+
 ReadFile()
+MakeTrayMenu()
 
-UpdateFile()
+; Gui
+global vCommand := ""
+global vContent := ""
+Gui, Add, Text,, Enter the command to trigger clip
+Gui, Add, Edit, r1 w300 vCommand
+Gui, Add, Text,, Enter the clip to be pasted
+Gui, Add, Edit, r1 w300 vContent
+; Gui, Show
 
-F5::reload
+; Gui enter submit
+#IfWinActive ahk_class AutoHotkeyGUI
+*Enter::
+    Gui, Submit
+    AddHotstring(Command, Content)
+return
+
+F5::reload return
