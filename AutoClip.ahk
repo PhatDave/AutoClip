@@ -93,6 +93,8 @@ Gui, Add, Edit, r1 w300 vContent
     if (WinActive("ahk_class AutoHotkeyGUI")) {
         Gui, Submit
         AddHotstring(Command, Content)
+        ControlSetText, Edit1,
+        ControlSetText, Edit2,
     }
 return
 
