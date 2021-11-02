@@ -6,7 +6,7 @@ SetWorkingDir %A_ScriptDir%
 #Persistent
 #Hotstring r
 
-Hotstring(":o:eml", "kosmodiskclassic0@gmail.com")
+; Hotstring(":o:eml", "kosmodiskclassic0@gmail.com")
 ; Hotstring(":o:asd", "fds")
 
 global hotstrings := {}
@@ -62,7 +62,7 @@ MakeTrayMenu() {
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
 }
 
-; ReadFile()
+ReadFile()
 MakeTrayMenu()
 
 ; Gui
@@ -75,10 +75,12 @@ Gui, Add, Edit, r1 w300 vContent
 ; Gui, Show
 
 ; Gui enter submit
-#IfWinActive ahk_class AutoHotkeyGUI
-*Enter::
-    Gui, Submit
-    AddHotstring(Command, Content)
+; #IfWinActive ahk_class AutoHotkeyGUI
+~Enter::
+    if (WinActive("ahk_class AutoHotkeyGUI")) {
+        Gui, Submit
+        AddHotstring(Command, Content)
+    }
 return
 
-F5::reload return
+; F5::reload return
