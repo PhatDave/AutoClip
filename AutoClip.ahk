@@ -53,8 +53,21 @@ AddMacro() {
     Gui, Show
 }
 
+RemoveMacro() {
+    if (hotstrings.HasKey(A_ThisMenuItem)) {
+        Hotstring(A_ThisMenuItem, hotstrings[A_ThisMenuItem], "Off")
+        hotstrings.Remove(A_ThisMenuItem)
+        UpdateFile()
+    }
+}
+
 OpenRemoveMenu() {
-    return
+    Menu, macroMenu, Add
+    Menu, macroMenu, DeleteAll
+    for k, v in hotstrings {
+        Menu, macroMenu, Add, %k%, RemoveMacro
+    }
+    Menu, macroMenu, Show
 }
 
 MakeTrayMenu() {
@@ -83,4 +96,6 @@ Gui, Add, Edit, r1 w300 vContent
     }
 return
 
-; F5::reload return
+~F5::
+    reload
+return
