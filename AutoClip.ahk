@@ -6,13 +6,16 @@ SetWorkingDir %A_ScriptDir%
 #Persistent
 #Hotstring r
 
-; Hotstring(":o:eml", "kosmodiskclassic0@gmail.com")
+Hotstring(":o:eml", "kosmodiskclassic0@gmail.com")
+; Hotstring(":o:asd", "fds")
 
 global hotstrings := {}
 
-PadCommand(commandButLocal) {
-    commandButLocal := ":o:" . commandButLocal
-    return commandButLocal
+PadCommand(command) {
+    if (!InStr(command, ":o:")) {
+        command := ":o:" . command
+    }
+    return command
 }
 
 AddHotstring(command, content) {
@@ -47,7 +50,11 @@ UpdateFile() {
 }
 
 AddMacro() {
-    tooltip, ok
+    Gui, Show
+}
+
+OpenRemoveMenu() {
+    return
 }
 
 MakeTrayMenu() {
@@ -55,7 +62,7 @@ MakeTrayMenu() {
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
 }
 
-ReadFile()
+; ReadFile()
 MakeTrayMenu()
 
 ; Gui
