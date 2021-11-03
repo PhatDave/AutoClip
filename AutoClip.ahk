@@ -6,9 +6,6 @@ SetWorkingDir %A_ScriptDir%
 #Persistent
 #Hotstring r
 
-; Hotstring(":o:eml", "kosmodiskclassic0@gmail.com")
-; Hotstring(":o:asd", "fds")
-
 global hotstrings := {}
 
 PadCommand(command) {
