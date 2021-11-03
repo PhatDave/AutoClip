@@ -6,6 +6,8 @@ SetWorkingDir %A_ScriptDir%
 #Persistent
 #Hotstring r
 
+SetBatchLines, -1
+
 global hotstrings := {}
 
 PadCommand(command) {
@@ -104,3 +106,9 @@ Gui, Add, Edit, r1 w300 vContent
         ControlSetText, Edit2,
     }
 return
+
+^!c::
+    Send, ^c
+    Sleep, 20
+    Run, https://www.google.com/search?q=%clipboard%
+Return
