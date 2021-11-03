@@ -70,9 +70,14 @@ OpenRemoveMenu() {
     Menu, macroMenu, Show
 }
 
+OpenMacros() {
+    Run, edit "Macros.txt"
+}
+
 MakeTrayMenu() {
     Menu, Tray, Add, Add Macro, AddMacro
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
+    Menu, Tray, Add, Oepn Macro List(file), OpenMacros
 }
 
 ReadFile()
