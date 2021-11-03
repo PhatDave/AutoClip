@@ -71,10 +71,15 @@ OpenMacros() {
     Run, edit "Macros.txt"
 }
 
+Reload() {
+    reload
+}
+
 MakeTrayMenu() {
     Menu, Tray, Add, Add Macro, AddMacroTray
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
     Menu, Tray, Add, Oepn Macro List (file), OpenMacros
+    Menu, Tray, Add, Reload, Reload
 }
 
 ReadFile()
@@ -98,8 +103,4 @@ Gui, Add, Edit, r1 w300 vContent
         ControlSetText, Edit1,
         ControlSetText, Edit2,
     }
-return
-
-~F5::
-    reload
 return
