@@ -15,7 +15,7 @@ PadCommand(command) {
     return command
 }
 
-AddHotstring(command, content) {
+AddMacro(command, content) {
     command := PadCommand(command)
     if (!hotstrings.HasKey(command)) {
         hotstrings[command] := content
@@ -33,7 +33,7 @@ ReadFile() {
         if (tempData.Length() == 2) {
             commandButRead := tempData[1]
             contentButRead := tempData[2]
-            AddHotstring(commandButRead, contentButRead)
+            AddMacro(commandButRead, contentButRead)
         }
     }
 }
@@ -46,7 +46,7 @@ UpdateFile() {
     file.close()
 }
 
-AddMacro() {
+AddMacroTray() {
     Gui, Show
 }
 
@@ -72,9 +72,9 @@ OpenMacros() {
 }
 
 MakeTrayMenu() {
-    Menu, Tray, Add, Add Macro, AddMacro
+    Menu, Tray, Add, Add Macro, AddMacroTray
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
-    Menu, Tray, Add, Oepn Macro List(file), OpenMacros
+    Menu, Tray, Add, Oepn Macro List (file), OpenMacros
 }
 
 ReadFile()
@@ -94,7 +94,7 @@ Gui, Add, Edit, r1 w300 vContent
 ~Enter::
     if (WinActive("ahk_class AutoHotkeyGUI")) {
         Gui, Submit
-        AddHotstring(Command, Content)
+        AddMacro(Command, Content)
         ControlSetText, Edit1,
         ControlSetText, Edit2,
     }
