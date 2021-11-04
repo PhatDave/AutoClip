@@ -81,9 +81,10 @@ AddMacroTray() {
 }
 
 RemoveMacro() {
-    if (hotstrings.HasKey(A_ThisMenuItem)) {
-        Hotstring(A_ThisMenuItem, hotstrings[A_ThisMenuItem], "Off")
-        hotstrings.Remove(A_ThisMenuItem)
+    item := StrSplit(A_ThisMenuItem, " ")[1]
+    if (hotstrings.HasKey(item)) {
+        Hotstring(item, hotstrings[item], "Off")
+        hotstrings.Remove(item)
         UpdateFile()
     }
 }
@@ -92,19 +93,20 @@ OpenRemoveMenu() {
     Menu, macroMenu, Add
     Menu, macroMenu, DeleteAll
     for k, v in hotstrings {
-        Menu, macroMenu, Add, %k%, RemoveMacro
+        Menu, macroMenu, Add, %k%        %v%, RemoveMacro
     }
     Menu, macroMenu, Show
 }
 
 ModMacro() {
-    if (hotstrings.HasKey(A_ThisMenuItem)) {
+    item := StrSplit(A_ThisMenuItem, " ")[1]
+    if (hotstrings.HasKey(item)) {
         Gui, Show
-        command2 := RegExReplace(A_ThisMenuItem, ":o:", "")
-        content2 := hotstrings[A_ThisMenuItem]
+        command2 := RegExReplace(item, ":o:", "")
+        content2 := hotstrings[item]
         ControlSetText, Edit1, %command2%, ahk_class AutoHotkeyGUI
         ControlSetText, Edit2, %content2%, ahk_class AutoHotkeyGUI
-        hotstrings.Remove(A_ThisMenuItem)
+        hotstrings.Remove(item)
     }
 }
 
@@ -112,7 +114,7 @@ OpenModMenu() {
     Menu, modMenu, Add
     Menu, modMenu, DeleteAll
     for k, v in hotstrings {
-        Menu, modMenu, Add, %k%, ModMacro
+        Menu, modMenu, Add, %k%         %v%, ModMacro
     }
     Menu, modMenu, Show
 }
