@@ -10,6 +10,30 @@ SetBatchLines, -1
 
 global hotstrings := {}
 
+; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
+b64Encode(string)
+{
+    size := 100
+    VarSetCapacity(bin, StrPut(string, "UTF-8")) && len := StrPut(string, &bin, "UTF-8") - 1 
+    if !(DllCall("crypt32\CryptBinaryToString", "ptr", &bin, "uint", len, "uint", 0x1, "ptr", 0, "uint*", size))
+        throw Exception("CryptBinaryToString failed", -1)
+    VarSetCapacity(buf, size << 1, 0)
+    if !(DllCall("crypt32\CryptBinaryToString", "ptr", &bin, "uint", len, "uint", 0x1, "ptr", &buf, "uint*", size))
+        throw Exception("CryptBinaryToString failed", -1)
+    return StrGet(&buf)
+}
+
+b64Decode(string)
+{
+    size := 100
+    if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", 0, "uint*", size, "ptr", 0, "ptr", 0))
+        throw Exception("CryptStringToBinary failed", -1)
+    VarSetCapacity(buf, size, 0)
+    if !(DllCall("crypt32\CryptStringToBinary", "ptr", &string, "uint", 0, "uint", 0x1, "ptr", &buf, "uint*", size, "ptr", 0, "ptr", 0))
+        throw Exception("CryptStringToBinary failed", -1)
+    return StrGet(&buf, size, "UTF-8")
+}
+
 PadCommand(command) {
     if (!InStr(command, ":o:")) {
         command := ":o:" . command
@@ -31,11 +55,15 @@ ReadFile() {
         FileAppend,, Macros.txt
     FileRead, macros, Macros.txt
     for index, macro in StrSplit(macros, "`n") {
-        tempData := StrSplit(macro, "|")
-        if (tempData.Length() == 2) {
-            commandButRead := tempData[1]
-            contentButRead := tempData[2]
-            AddMacro(commandButRead, contentButRead)
+        if (StrLen(macro) > 3) {
+            macro := b64Decode(macro)
+            tempData := StrSplit(macro, "|")
+            if (tempData.Length() == 2) {
+                commandButRead := tempData[1]
+                contentButRead := tempData[2]
+                contentButRead := RegExReplace(contentButRead, "\s+$", "")
+                AddMacro(commandButRead, contentButRead)
+            }
         }
     }
 }
@@ -43,7 +71,7 @@ ReadFile() {
 UpdateFile() {
     file := FileOpen("Macros.txt", "W")
     for k, v in hotstrings {
-        file.write(k . "|" . v . "`n")
+        file.write(b64Encode(k . "|" . v . "`n"))
     }
     file.close()
 }
@@ -69,6 +97,26 @@ OpenRemoveMenu() {
     Menu, macroMenu, Show
 }
 
+ModMacro() {
+    if (hotstrings.HasKey(A_ThisMenuItem)) {
+        Gui, Show
+        command2 := RegExReplace(A_ThisMenuItem, ":o:", "")
+        content2 := hotstrings[A_ThisMenuItem]
+        ControlSetText, Edit1, %command2%, ahk_class AutoHotkeyGUI
+        ControlSetText, Edit2, %content2%, ahk_class AutoHotkeyGUI
+        hotstrings.Remove(A_ThisMenuItem)
+    }
+}
+
+OpenModMenu() {
+    Menu, modMenu, Add
+    Menu, modMenu, DeleteAll
+    for k, v in hotstrings {
+        Menu, modMenu, Add, %k%, ModMacro
+    }
+    Menu, modMenu, Show
+}
+
 OpenMacros() {
     Run, edit "Macros.txt"
 }
@@ -80,7 +128,8 @@ Reload() {
 MakeTrayMenu() {
     Menu, Tray, Add, Add Macro, AddMacroTray
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
-    Menu, Tray, Add, Oepn Macro List (file), OpenMacros
+    ; Menu, Tray, Add, Oepn Macro List (file), OpenMacros
+    Menu, Tray, Add, ModifyMacro, OpenModMenu
     Menu, Tray, Add, Reload, Reload
 }
 
@@ -101,6 +150,15 @@ Gui, Add, Edit, r1 w300 vContent
 ~Enter::
     if (WinActive("ahk_class AutoHotkeyGUI")) {
         Gui, Submit
+        AddMacro(Command, Content)
+        ControlSetText, Edit1,
+        ControlSetText, Edit2,
+    }
+return
+
+GuiClose:
+    Gui, Submit
+    if (StrLen(Command) > 0 && StrLen(Content) > 0) {
         AddMacro(Command, Content)
         ControlSetText, Edit1,
         ControlSetText, Edit2,
