@@ -44,7 +44,7 @@ class AllEntries {
     Remove(command) {
         delEntry := this.Get(command)
         this.entries.Remove(delEntry)
-        delEntry.Disable()
+        delEntry.Remove()
         this.SaveAllToFile()
     }
 
@@ -78,7 +78,8 @@ class AllEntries {
                     rcommand := tempData[1]
                     rcontent := tempData[2]
                     enabled := tempData[3]
-                    newentry := new Entry(rcommand, rcontent, this)
+                    parent := tempData[4]
+                    newentry := new Entry(rcommand, rcontent, this, parent)
                     if enabled == "1"
                         newentry.Enable()
                     else
@@ -91,6 +92,7 @@ class AllEntries {
 
 Class Entry {
     static parent := 0
+    static children := []
     static globalEntryList := 0
 
     Command {
@@ -124,13 +126,30 @@ Class Entry {
         }
     }
 
-    __New(command, content, globalEntryList) {
+    __New(command, content, globalEntryList, parent:=0) {
         this.globalEntryList := globalEntryList
         this.Command := this.PadCommand(command)
         this.Content := content
         this.Enabled := 0
+        this.AddParent(parent)
         allEntries.Insert(this)
         return this
+    }
+
+    AddParent(parentC) {
+        if (parentC != 0) {
+            parentO := this.globalEntryList.Get(parentC)
+            this.parent := parentO
+            this.parent.AddChild(this)
+        }
+    }
+
+    AddChild(child) {
+        this.children.Insert(child)
+    }
+
+    Remove() {
+        this.Disable()
     }
 
     PadCommand(command) {
@@ -149,7 +168,10 @@ Class Entry {
     }
 
     ToString() {
-        return this.Command . "|" . this.Content . "|" . this.enabled
+        if this.parent != 0
+            return this.Command . "|" . this.Content . "|" . this.enabled . "|" . this.parent
+        else
+            return this.Command . "|" . this.Content . "|" . this.enabled . "|" . this.parent.Command
     }
 
     ; Maybe one day do proper GUI instead of tray?
@@ -174,6 +196,9 @@ new Entry("test", "test123", entries).Enable()
 new Entry("test1", "testasd", entries).Enable()
 new Entry("test2", "test1gfg", entries).Enable()
 new Entry("test3", "test1fga3", entries).Enable()
+new Entry("test4", "test1fga4", entries, ":o:test3").Enable()
+new Entry("test5", "test1fga5", entries, ":o:test3").Enable()
+new Entry("test6", "test1fga6", entries, ":o:test3").Enable()
 
 ; asd1 := RegExMatch("asdfasfg$<asd, 2, 1, 4, 5$>", "\$<[(\d*\w*)+\,?\s*]+\$>", test123, 1)
 ; dfsajdh := new Entry("test", "test2")
