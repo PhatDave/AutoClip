@@ -8,8 +8,6 @@ SetWorkingDir %A_ScriptDir%
 
 SetBatchLines, -1
 
-global hotstrings := {}
-
 ; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
 b64Encode(string)
 {
@@ -38,24 +36,22 @@ class AllEntries {
     static entries := []
 
     Insert(entry) {
-        if !this.Contains(entry) {
+        if !this.Get(entry.Command) {
             this.entries.Insert(entry)
         }
     }
 
-    Contains(entry) {
-        for k, v in this.entries {
-            if v.Command == entry.Command {
-                return k
-            }
-        }
-        return 0
+    Remove(command) {
+        delEntry := this.Get(command)
+        this.entries.Remove(delEntry)
+        delEntry.Disable()
+        this.SaveAllToFile()
     }
 
-    ContainsCommand(command) {
+    Get(command) {
         for k, v in this.entries {
             if v.Command == command {
-                return k
+                return v
             }
         }
         return 0
@@ -90,17 +86,6 @@ class AllEntries {
                 }
             }
         }
-    }
-
-    ModifyEntry(oldCommand, newCommand, newContent) {
-        for k, v in this.entries {
-            if v.Command == oldCommand {
-                v.Command := newCommand
-                v.Content := newContent
-                v.Enable()
-            }
-        }
-        return 0
     }
 }
 
@@ -167,8 +152,17 @@ Class Entry {
         return this.Command . "|" . this.Content . "|" . this.enabled
     }
 
-    FromString() {
-
+    ; Maybe one day do proper GUI instead of tray?
+    TidyString() {
+        output := ""
+        output .= this.Command
+        while (StrLen(output) < 16)
+            output .= " "
+        output .= this.Content
+        while (StrLen(output) < 16 + 64)
+            output .= " "
+        output .= this.Enabled
+        return output
     }
 }
 
@@ -194,7 +188,8 @@ OpenRemoveMenu() {
     Menu, macroMenu, Add
     Menu, macroMenu, DeleteAll
     for k, v in entries.entries {
-        Menu, macroMenu, Add, %k% %v%, RemoveMacro
+        output := v.TidyString()
+        Menu, macroMenu, Add, %output%, RemoveMacro
     }
     Menu, macroMenu, Show
 }
@@ -203,31 +198,27 @@ OpenModMenu() {
     Menu, modMenu, Add
     Menu, modMenu, DeleteAll
     for k, v in entries.entries {
-        Menu, modMenu, Add, %k% %v%, ModMacro
+        output := v.TidyString()
+        Menu, modMenu, Add, %output%, ModMacro
     }
     Menu, modMenu, Show
 }
 
-global modifying := 0
 ModMacro() {
-    item := StrSplit(A_ThisMenuItem, " ")[1]
-    if (hotstrings.HasKey(item)) {
+    modCommand := StrSplit(A_ThisMenuItem, " ")[1]
+    modEntry := entries.Get(modCommand)
+    modContent := modEntry.Content
+    modCommand := RegExReplace(modCommand, ":o:", "")
+    if (modEntry) {
         Gui, Show
-        ; command2 := RegExReplace(item, ":o:", "")
-        ; content2 := hotstrings[item]
-        ; ControlSetText, Edit1, %command2%, ahk_class AutoHotkeyGUI
-        ; ControlSetText, Edit2, %content2%, ahk_class AutoHotkeyGUI
-        ; hotstrings.Remove(item)
-        modifying := 1
+        ControlSetText, Edit1, %modCommand%, ahk_class AutoHotkeyGUI
+        ControlSetText, Edit2, %modContent%, ahk_class AutoHotkeyGUI
+        entries.Remove(modCommand)
     }
 }
 
 RemoveMacro() {
-    item := StrSplit(A_ThisMenuItem, " ")[1]
-    if (entries.Contains(item)) {
-        ; Hotstring(item, hotstrings[item], "Off")
-        ; hotstrings.Remove(item)
-    }
+    entries.Remove(StrSplit(A_ThisMenuItem, " ")[1])
 }
 
 Reload() {
@@ -254,19 +245,12 @@ Gui, Add, Edit, r1 w300 vGUIContent
 
 HandleInput(command, content) {
     if (StrLen(command) > 0 && StrLen(content) > 0) {
-        if entries.ContainsCommand(command) {
-            entries.ModifyEntry(oldCommand, command, content)
-            modifying := 0
-        } else {
-            new Entry(command, content, entries).Enable()
-        }
+        new Entry(command, content, entries).Enable()
         ControlSetText, Edit1,
         ControlSetText, Edit2,
     }
 }
 
-; Gui enter submit
-; #IfWinActive ahk_class AutoHotkeyGUI
 ~Enter::
     if (WinActive("ahk_class AutoHotkeyGUI")) {
         Gui, Submit
