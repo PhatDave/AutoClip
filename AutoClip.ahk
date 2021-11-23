@@ -10,6 +10,71 @@ SetBatchLines, -1
 
 global hotstrings := {}
 
+class AllEntries {
+    static entries := []
+
+    Insert(entry) {
+        if !this.Contains(entry) {
+            this.entries.Insert(entry)
+        }
+    }
+
+    Contains(entry) {
+        for k, v in this.entries {
+            if v.command == entry.command {
+                return true
+            }
+        }
+        return false
+    }
+}
+
+Class Entry {
+    static parent := 0
+    static enabled := false
+
+    __New(command2, content2) {
+        this.command := command2
+        this.content := content2
+        allEntries.Insert(this)
+    }
+
+    PadCommand() {
+        if (!InStr(this.command, ":o:")) {
+            this.command := ":o:" . this.command
+        }
+    }
+
+    Enable() {
+        this.enabled := true
+        this.PadCommand()
+        HotString(this.command, this.content)
+        ; UpdateFile()
+    }
+
+    Disable() {
+        this.PadCommand()
+        HotString(this.command, this.content, 0)
+    }
+}
+
+UpdateFileOOP() {
+
+}
+
+entries := new AllEntries()
+
+testOOP := new Entry("test", "test123")
+testOOP := new Entry("test1", "testasd")
+testOOP := new Entry("test2", "test1gfg")
+testOOP := new Entry("test3", "test1fga3")
+testOOP.Enable()
+
+; asd1 := RegExMatch("asdfasfg$<asd, 2, 1, 4, 5$>", "\$<[(\d*\w*)+\,?\s*]+\$>", test123, 1)
+; dfsajdh := new Entry("test", "test2")
+; dfsajdh.PadCommand()
+; tooltip, asd1
+
 ; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
 b64Encode(string)
 {
@@ -34,6 +99,7 @@ b64Decode(string)
     return StrGet(&buf, size, "UTF-8")
 }
 
+; @Deprecated
 PadCommand(command) {
     if (!InStr(command, ":o:")) {
         command := ":o:" . command
@@ -42,6 +108,9 @@ PadCommand(command) {
 }
 
 AddMacro(command, content) {
+    if (InStr(Content, "$<") && InStr(Content, "$>")) {
+        test := RegExMatch(Content, "$<%d+,%d+,%d+$>")
+    }
     command := PadCommand(command)
     if (!hotstrings.HasKey(command)) {
         hotstrings[command] := content
@@ -167,8 +236,8 @@ GuiClose:
     }
 return
 
-^!c::
++!c::
     Send, ^c
     Sleep, 20
     Run, https://www.google.com/search?q=%clipboard%
-Return
+return
