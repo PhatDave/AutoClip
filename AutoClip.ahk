@@ -46,10 +46,19 @@ class AllEntries {
     Contains(entry) {
         for k, v in this.entries {
             if v.Command == entry.Command {
-                return true
+                return k
             }
         }
-        return false
+        return 0
+    }
+
+    ContainsCommand(command) {
+        for k, v in this.entries {
+            if v.Command == command {
+                return k
+            }
+        }
+        return 0
     }
 
     SaveAllToFile() {
@@ -81,6 +90,17 @@ class AllEntries {
                 }
             }
         }
+    }
+
+    ModifyEntry(oldCommand, newCommand, newContent) {
+        for k, v in this.entries {
+            if v.Command == oldCommand {
+                v.Command := newCommand
+                v.Content := newContent
+                v.Enable()
+            }
+        }
+        return 0
     }
 }
 
@@ -125,6 +145,7 @@ Class Entry {
         this.Content := content
         this.Enabled := 0
         allEntries.Insert(this)
+        return this
     }
 
     PadCommand(command) {
@@ -152,112 +173,61 @@ Class Entry {
 }
 
 
-entries := new AllEntries()
+global entries := new AllEntries()
 entries.ReadFile()
 
-testOOP := new Entry("test", "test123", entries)
-testOOP := new Entry("test1", "testasd", entries)
-testOOP := new Entry("test2", "test1gfg", entries)
-testOOP := new Entry("test3", "test1fga3", entries)
-testOOP.Enable()
+new Entry("test", "test123", entries).Enable()
+new Entry("test1", "testasd", entries).Enable()
+new Entry("test2", "test1gfg", entries).Enable()
+new Entry("test3", "test1fga3", entries).Enable()
 
 ; asd1 := RegExMatch("asdfasfg$<asd, 2, 1, 4, 5$>", "\$<[(\d*\w*)+\,?\s*]+\$>", test123, 1)
 ; dfsajdh := new Entry("test", "test2")
 ; dfsajdh.PadCommand()
 ; tooltip, asd1
 
-
-; @Deprecated
-PadCommand(command) {
-    if (!InStr(command, ":o:")) {
-        command := ":o:" . command
-    }
-    return command
-}
-
-AddMacro(command, content) {
-    if (InStr(Content, "$<") && InStr(Content, "$>")) {
-        test := RegExMatch(Content, "$<%d+,%d+,%d+$>")
-    }
-    command := PadCommand(command)
-    if (!hotstrings.HasKey(command)) {
-        hotstrings[command] := content
-        HotString(command, content)
-        UpdateFile()
-    }
-}
-
-ReadFile() {
-    IfNotExist, Macros.txt
-        FileAppend,, Macros.txt
-    FileRead, macros, Macros.txt
-    for index, macro in StrSplit(macros, "`n") {
-        if (StrLen(macro) > 3) {
-            macro := b64Decode(macro)
-            tempData := StrSplit(macro, "|")
-            if (tempData.Length() == 2) {
-                commandButRead := tempData[1]
-                contentButRead := tempData[2]
-                contentButRead := RegExReplace(contentButRead, "\s+$", "")
-                AddMacro(commandButRead, contentButRead)
-            }
-        }
-    }
-}
-
-UpdateFile() {
-    file := FileOpen("Macros.txt", "W")
-    for k, v in hotstrings {
-        file.write(b64Encode(k . "|" . v . "`n"))
-    }
-    file.close()
-}
-
 AddMacroTray() {
     Gui, Show
-}
-
-RemoveMacro() {
-    item := StrSplit(A_ThisMenuItem, " ")[1]
-    if (hotstrings.HasKey(item)) {
-        Hotstring(item, hotstrings[item], "Off")
-        hotstrings.Remove(item)
-        UpdateFile()
-    }
 }
 
 OpenRemoveMenu() {
     Menu, macroMenu, Add
     Menu, macroMenu, DeleteAll
-    for k, v in hotstrings {
-        Menu, macroMenu, Add, %k%        %v%, RemoveMacro
+    for k, v in entries.entries {
+        Menu, macroMenu, Add, %k% %v%, RemoveMacro
     }
     Menu, macroMenu, Show
-}
-
-ModMacro() {
-    item := StrSplit(A_ThisMenuItem, " ")[1]
-    if (hotstrings.HasKey(item)) {
-        Gui, Show
-        command2 := RegExReplace(item, ":o:", "")
-        content2 := hotstrings[item]
-        ControlSetText, Edit1, %command2%, ahk_class AutoHotkeyGUI
-        ControlSetText, Edit2, %content2%, ahk_class AutoHotkeyGUI
-        hotstrings.Remove(item)
-    }
 }
 
 OpenModMenu() {
     Menu, modMenu, Add
     Menu, modMenu, DeleteAll
-    for k, v in hotstrings {
-        Menu, modMenu, Add, %k%         %v%, ModMacro
+    for k, v in entries.entries {
+        Menu, modMenu, Add, %k% %v%, ModMacro
     }
     Menu, modMenu, Show
 }
 
-OpenMacros() {
-    Run, edit "Macros.txt"
+global modifying := 0
+ModMacro() {
+    item := StrSplit(A_ThisMenuItem, " ")[1]
+    if (hotstrings.HasKey(item)) {
+        Gui, Show
+        ; command2 := RegExReplace(item, ":o:", "")
+        ; content2 := hotstrings[item]
+        ; ControlSetText, Edit1, %command2%, ahk_class AutoHotkeyGUI
+        ; ControlSetText, Edit2, %content2%, ahk_class AutoHotkeyGUI
+        ; hotstrings.Remove(item)
+        modifying := 1
+    }
+}
+
+RemoveMacro() {
+    item := StrSplit(A_ThisMenuItem, " ")[1]
+    if (entries.Contains(item)) {
+        ; Hotstring(item, hotstrings[item], "Off")
+        ; hotstrings.Remove(item)
+    }
 }
 
 Reload() {
@@ -267,41 +237,46 @@ Reload() {
 MakeTrayMenu() {
     Menu, Tray, Add, Add Macro, AddMacroTray
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
-    ; Menu, Tray, Add, Oepn Macro List (file), OpenMacros
-    Menu, Tray, Add, ModifyMacro, OpenModMenu
+    Menu, Tray, Add, Modify Macro, OpenModMenu
     Menu, Tray, Add, Reload, Reload
 }
 
-ReadFile()
 MakeTrayMenu()
 
 ; Gui
-global vCommand := ""
-global vContent := ""
+global vGUICommand := ""
+global vGUIContent := ""
 Gui, Add, Text,, Enter the command to trigger clip
-Gui, Add, Edit, r1 w300 vCommand
+Gui, Add, Edit, r1 w300 vGUICommand
 Gui, Add, Text,, Enter the clip to be pasted
-Gui, Add, Edit, r1 w300 vContent
+Gui, Add, Edit, r1 w300 vGUIContent
 ; Gui, Show
+
+HandleInput(command, content) {
+    if (StrLen(command) > 0 && StrLen(content) > 0) {
+        if entries.ContainsCommand(command) {
+            entries.ModifyEntry(oldCommand, command, content)
+            modifying := 0
+        } else {
+            new Entry(command, content, entries).Enable()
+        }
+        ControlSetText, Edit1,
+        ControlSetText, Edit2,
+    }
+}
 
 ; Gui enter submit
 ; #IfWinActive ahk_class AutoHotkeyGUI
 ~Enter::
     if (WinActive("ahk_class AutoHotkeyGUI")) {
         Gui, Submit
-        AddMacro(Command, Content)
-        ControlSetText, Edit1,
-        ControlSetText, Edit2,
+        HandleInput(GUICommand, GUIContent)
     }
 return
 
 GuiClose:
     Gui, Submit
-    if (StrLen(Command) > 0 && StrLen(Content) > 0) {
-        AddMacro(Command, Content)
-        ControlSetText, Edit1,
-        ControlSetText, Edit2,
-    }
+    HandleInput(GUICommand, GUIContent)
 return
 
 +!c::
