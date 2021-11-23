@@ -10,71 +10,6 @@ SetBatchLines, -1
 
 global hotstrings := {}
 
-class AllEntries {
-    static entries := []
-
-    Insert(entry) {
-        if !this.Contains(entry) {
-            this.entries.Insert(entry)
-        }
-    }
-
-    Contains(entry) {
-        for k, v in this.entries {
-            if v.command == entry.command {
-                return true
-            }
-        }
-        return false
-    }
-}
-
-Class Entry {
-    static parent := 0
-    static enabled := false
-
-    __New(command2, content2) {
-        this.command := command2
-        this.content := content2
-        allEntries.Insert(this)
-    }
-
-    PadCommand() {
-        if (!InStr(this.command, ":o:")) {
-            this.command := ":o:" . this.command
-        }
-    }
-
-    Enable() {
-        this.enabled := true
-        this.PadCommand()
-        HotString(this.command, this.content)
-        ; UpdateFile()
-    }
-
-    Disable() {
-        this.PadCommand()
-        HotString(this.command, this.content, 0)
-    }
-}
-
-UpdateFileOOP() {
-
-}
-
-entries := new AllEntries()
-
-testOOP := new Entry("test", "test123")
-testOOP := new Entry("test1", "testasd")
-testOOP := new Entry("test2", "test1gfg")
-testOOP := new Entry("test3", "test1fga3")
-testOOP.Enable()
-
-; asd1 := RegExMatch("asdfasfg$<asd, 2, 1, 4, 5$>", "\$<[(\d*\w*)+\,?\s*]+\$>", test123, 1)
-; dfsajdh := new Entry("test", "test2")
-; dfsajdh.PadCommand()
-; tooltip, asd1
-
 ; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
 b64Encode(string)
 {
@@ -98,6 +33,139 @@ b64Decode(string)
         throw Exception("CryptStringToBinary failed", -1)
     return StrGet(&buf, size, "UTF-8")
 }
+
+class AllEntries {
+    static entries := []
+
+    Insert(entry) {
+        if !this.Contains(entry) {
+            this.entries.Insert(entry)
+        }
+    }
+
+    Contains(entry) {
+        for k, v in this.entries {
+            if v.Command == entry.Command {
+                return true
+            }
+        }
+        return false
+    }
+
+    SaveAllToFile() {
+        file := FileOpen("Macros.txt", "W")
+        for k, v in this.entries {
+            entryString := b64Encode(v.ToString())
+            file.write(entryString)
+        }
+        file.close()
+    }
+
+    ReadFile() {
+        IfNotExist, Macros.txt
+            FileAppend,, Macros.txt
+        FileRead, macros, Macros.txt
+        for index, macro in StrSplit(macros, "`n") {
+            if (StrLen(macro) > 3) {
+                macro := b64Decode(macro)
+                tempData := StrSplit(macro, "|")
+                if (tempData.Length() == 3) {
+                    rcommand := tempData[1]
+                    rcontent := tempData[2]
+                    enabled := tempData[3]
+                    newentry := new Entry(rcommand, rcontent, this)
+                    if enabled == "1"
+                        newentry.Enable()
+                    else
+                        newentry.Disable()
+                }
+            }
+        }
+    }
+}
+
+Class Entry {
+    static parent := 0
+    static globalEntryList := 0
+
+    Command {
+        get {
+            return this._command
+        }
+        set {
+            this._command := value
+            this.globalEntryList.SaveAllToFile()
+        }
+    }
+
+    Content {
+        get {
+            return this._content
+        }
+        set {
+            this._content := value
+            this.globalEntryList.SaveAllToFile()
+        }
+    }
+
+    Enabled {
+        get {
+            return this._enabled
+        }
+        set {
+            this._enabled := value
+            HotString(this.Command, this.content, this._enabled)
+            this.globalEntryList.SaveAllToFile()
+        }
+    }
+
+    __New(command, content, globalEntryList) {
+        this.globalEntryList := globalEntryList
+        this.Command := this.PadCommand(command)
+        this.Content := content
+        this.Enabled := 0
+        allEntries.Insert(this)
+    }
+
+    PadCommand(command) {
+        if (!InStr(command, ":o:")) {
+            command := ":o:" . command
+        }
+        return command
+    }
+
+    Enable() {
+        this.Enabled := 1
+    }
+
+    Disable() {
+        this.Enabled := 0
+    }
+
+    ToString() {
+        return this.Command . "|" . this.Content . "|" . this.enabled
+    }
+
+    FromString() {
+
+    }
+}
+
+
+entries := new AllEntries()
+entries.ReadFile()
+
+testOOP := new Entry("test", "test123", entries)
+testOOP := new Entry("test1", "testasd", entries)
+testOOP := new Entry("test2", "test1gfg", entries)
+testOOP := new Entry("test3", "test1fga3", entries)
+testOOP.Enable()
+
+; asd1 := RegExMatch("asdfasfg$<asd, 2, 1, 4, 5$>", "\$<[(\d*\w*)+\,?\s*]+\$>", test123, 1)
+; dfsajdh := new Entry("test", "test2")
+; dfsajdh.PadCommand()
+; tooltip, asd1
+
 
 ; @Deprecated
 PadCommand(command) {
