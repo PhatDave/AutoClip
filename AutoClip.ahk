@@ -32,6 +32,27 @@ b64Decode(string)
     return StrGet(&buf, size, "UTF-8")
 }
 
+global lastCall := 0
+global savePauseThreshold := 100
+
+Save() {
+    elapsedSinceLastCall := A_TickCount - lastCall
+    if (elapsedSinceLastCall > savePauseThreshold) {
+        SetTimer, SaveAllToFile, %savePauseThreshold%
+    }
+    lastCall := A_TickCount
+}
+
+SaveAllToFile() {
+    file := FileOpen("Macros.txt", "W")
+    for k, v in entries.entries {
+        entryString := b64Encode(v.ToString())
+        file.write(entryString)
+    }
+    file.close()
+    SetTimer, SaveAllToFile, Off
+}
+
 class AllEntries {
     static entries := []
 
@@ -44,7 +65,7 @@ class AllEntries {
     Remove(command) {
         delEntry := this.Get(command)
         delEntry.Remove()
-        this.SaveAllToFile()
+        Save()
     }
 
     Get(command) {
@@ -65,15 +86,6 @@ class AllEntries {
         return 0
     }
 
-    SaveAllToFile() {
-        file := FileOpen("Macros.txt", "W")
-        for k, v in this.entries {
-            entryString := b64Encode(v.ToString())
-            file.write(entryString)
-        }
-        file.close()
-    }
-
     ReadFile() {
         IfNotExist, Macros.txt
             FileAppend,, Macros.txt
@@ -82,17 +94,18 @@ class AllEntries {
             if (StrLen(macro) > 3) {
                 macro := b64Decode(macro)
                 tempData := StrSplit(macro, "|")
-                if (tempData.Length() == 3) {
-                    rcommand := tempData[1]
-                    rcontent := tempData[2]
-                    enabled := tempData[3]
-                    parent := tempData[4]
-                    newentry := new Entry(rcommand, rcontent, parent)
-                    if enabled == "1"
-                        newentry.Enable()
-                    else
-                        newentry.Disable()
-                }
+                rcommand := tempData[1]
+                ; Removes whitespace from the end, might want to bring it out into a function, might want to refactor everything maybe
+                rcontent := RegExReplace(tempData[2], "\s+$", "")
+                enabled := tempData[3]
+                if (enabled == "")
+                    enabled := 1
+                parent := this.Get(tempData[4])
+                newentry := new Entry(rcommand, rcontent, parent)
+                if enabled == "1"
+                    newentry.Enable()
+                else
+                    newentry.Disable()
             }
         }
     }
@@ -102,13 +115,15 @@ Class Entry {
     parent := 0
     children := []
 
+    ; Maybe reduce this massive overhead one day?
+    ; Maybe urgently
     Command {
         get {
             return this._command
         }
         set {
             this._command := value
-            entries.SaveAllToFile()
+            Save()
         }
     }
 
@@ -118,7 +133,7 @@ Class Entry {
         }
         set {
             this._content := value
-            entries.SaveAllToFile()
+            Save()
         }
     }
 
@@ -129,7 +144,7 @@ Class Entry {
         set {
             this._enabled := value
             HotString(this.Command, this.content, this._enabled)
-            entries.SaveAllToFile()
+            Save()
         }
     }
 
@@ -225,6 +240,14 @@ Class Entry {
         return command
     }
 
+    Toggle() {
+        if (this.Enabled) {
+            this.Enabled := 0
+        } else {
+            this.Enabled := 1
+        }
+    }
+
     Enable() {
         this.Enabled := 1
     }
@@ -258,7 +281,6 @@ Class Entry {
 global entries := new AllEntries()
 entries.ReadFile()
 
-new Entry("test$<1, 2, 3, bacd, fashg, fhidu78, ghauie$>", "test$<i$>")
 
 AddMacroTray() {
     Gui, Show
@@ -272,6 +294,10 @@ OpenRemoveMenu() {
         Menu, macroMenu, Add, %output%, RemoveMacro
     }
     Menu, macroMenu, Show
+}
+
+RemoveMacro() {
+    entries.Remove(StrSplit(A_ThisMenuItem, " ")[1])
 }
 
 OpenModMenu() {
@@ -299,8 +325,19 @@ ModMacro() {
     }
 }
 
-RemoveMacro() {
-    entries.Remove(StrSplit(A_ThisMenuItem, " ")[1])
+OpenToggleMenu() {
+    Menu, macroMenu, Add
+    Menu, macroMenu, DeleteAll
+    for k, v in entries.entries {
+        output := v.TidyString()
+        Menu, macroMenu, Add, %output%, ToggleMacro
+    }
+    Menu, macroMenu, Show
+}
+
+ToggleMacro() {
+    entries.Get(StrSplit(A_ThisMenuItem, " ")[1]).Toggle()
+    OpenToggleMenu()
 }
 
 Reload() {
@@ -311,6 +348,7 @@ MakeTrayMenu() {
     Menu, Tray, Add, Add Macro, AddMacroTray
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
     Menu, Tray, Add, Modify Macro, OpenModMenu
+    Menu, Tray, Add, Toggle Macro, OpenToggleMenu
     Menu, Tray, Add, Reload, Reload
 }
 

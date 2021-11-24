@@ -23,10 +23,19 @@ Right clicking the appropriate AHK icon in the system trey will bring up several
 
 Adding a macro with a command `mypw` and clip `MyVerySecurePassword` would make it so whenever `mypw` was entered `MyVerySecurePassword` would appear instead (the command has to be followed by a space or enter or , or .)
 
-## Macros.txt
+## Advanced usage
 
-File contains all user defined macros
+Multiple linked macros can be added (Following `2.0.0`) that behave like a set of hotstrings loosely tied to the parent
 
-Their commands and contents can be altered but the format must be respected
+For example you may want a set of macros whose commands are `mymacro<number>` where the number ranges from 1 to 10 with it's content matches `mycontent<number>`
 
-`:o:<command>|<clip>`, with omitting < and >
+To create a set of macros include `$<$>` in both the command and the content with the set of **values** in between the < and >, for example
+
+```
+myMacro$<1,2,3,4$>
+myMacro$<i$>content
+```
+
+Would create 4 macros, `myMacro1`, `myMacro2`, `myMacro3`, `myMacro4` with contents of `myMacro1content`, `myMacro2content`, `myMacro3content`, `myMacro4content`
+
+Notice `$<i$>` in content signifying the position where values from command are spliced in; multiple `$<i$>` may exist
