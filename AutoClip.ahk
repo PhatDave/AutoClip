@@ -32,15 +32,10 @@ b64Decode(string)
     return StrGet(&buf, size, "UTF-8")
 }
 
-global lastCall := 0
-global savePauseThreshold := 100
+global timer := 0
 
 Save() {
-    elapsedSinceLastCall := A_TickCount - lastCall
-    if (elapsedSinceLastCall > savePauseThreshold) {
-        SetTimer, SaveAllToFile, %savePauseThreshold%
-    }
-    lastCall := A_TickCount
+    SetTimer, SaveAllToFile, 100
 }
 
 SaveAllToFile() {
