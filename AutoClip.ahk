@@ -35,7 +35,7 @@ b64Decode(string)
 global timer := 0
 
 Save() {
-    SetTimer, SaveAllToFile, 200
+    SetTimer, SaveAllToFile, 20
 }
 
 SaveAllToFile() {
