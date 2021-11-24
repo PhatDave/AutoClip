@@ -35,13 +35,14 @@ b64Decode(string)
 global timer := 0
 
 Save() {
-    SetTimer, SaveAllToFile, 100
+    SetTimer, SaveAllToFile, 20
 }
 
 SaveAllToFile() {
     file := FileOpen("Macros.txt", "W")
     for k, v in entries.entries {
-        entryString := b64Encode(v.ToString())
+        eString := v.ToString()
+        entryString := b64Encode(eString)
         file.write(entryString)
     }
     file.close()
@@ -90,19 +91,25 @@ class AllEntries {
                 macro := b64Decode(macro)
                 tempData := StrSplit(macro, "|")
                 rcommand := tempData[1]
-                ; Removes whitespace from the end, might want to bring it out into a function, might want to refactor everything maybe
-                rcontent := RegExReplace(tempData[2], "\s+$", "")
-                enabled := tempData[3]
-                if (enabled == "")
-                    enabled := 1
+                rcontent := this.FixContent(tempData[2])
+                isenabled := tempData[3]
+                if (isenabled == "")
+                    isenabled := 1
                 parent := this.Get(tempData[4])
                 newentry := new Entry(rcommand, rcontent, parent)
-                if enabled == "1"
+                if (isenabled == 1) {
                     newentry.Enable()
-                else
+                } else {
                     newentry.Disable()
+                }
             }
         }
+    }
+
+    FixContent(content) {
+        content := RegExReplace(content, "`n$`")
+        ; content := RegExReplace(content, "\$spc\$", " ")
+        return content
     }
 }
 
@@ -110,8 +117,6 @@ Class Entry {
     parent := 0
     children := []
 
-    ; Maybe reduce this massive overhead one day?
-    ; Maybe urgently
     Command {
         get {
             return this._command
@@ -124,10 +129,12 @@ Class Entry {
 
     Content {
         get {
-            return this._content
+            ; RegExReplace(this.Content, "\s", "$spc$")
+            return RegExReplace(this._content, "\$spc\$", " ")
         }
         set {
-            this._content := value
+            ; RegExReplace(content, "\$spc\$", " ")
+            this._content := RegExReplace(value, "\s", "$spc$")
             Save()
         }
     }
@@ -237,9 +244,9 @@ Class Entry {
 
     Toggle() {
         if (this.Enabled) {
-            this.Enabled := 0
+            this.Disable()
         } else {
-            this.Enabled := 1
+            this.Enable()
         }
     }
 
@@ -332,7 +339,7 @@ OpenToggleMenu() {
 
 ToggleMacro() {
     entries.Get(StrSplit(A_ThisMenuItem, " ")[1]).Toggle()
-    OpenToggleMenu()
+    ; OpenToggleMenu()
 }
 
 Reload() {
@@ -360,6 +367,7 @@ Gui, Add, Edit, r1 w300 vGUIContent
 
 HandleInput(command, content) {
     if (StrLen(command) > 0 && StrLen(content) > 0) {
+        ; content := RegExReplace(content, "`n$", "")
         new Entry(command, content).Enable()
         ControlSetText, Edit1,
         ControlSetText, Edit2,

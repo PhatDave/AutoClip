@@ -39,3 +39,5 @@ myMacro$<i$>content
 Would create 4 macros, `myMacro1`, `myMacro2`, `myMacro3`, `myMacro4` with contents of `myMacro1content`, `myMacro2content`, `myMacro3content`, `myMacro4content`
 
 Notice `$<i$>` in content signifying the position where values from command are spliced in; multiple `$<i$>` may exist
+
+Note: linked entries are **removed together** and can not be edit!
