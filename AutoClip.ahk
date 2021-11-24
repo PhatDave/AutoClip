@@ -43,7 +43,6 @@ class AllEntries {
 
     Remove(command) {
         delEntry := this.Get(command)
-        this.entries.Remove(delEntry)
         delEntry.Remove()
         this.SaveAllToFile()
     }
@@ -52,6 +51,15 @@ class AllEntries {
         for k, v in this.entries {
             if v.Command == command {
                 return v
+            }
+        }
+        return 0
+    }
+
+    GetIndex(command) {
+        for k, v in this.entries {
+            if v.Command == command {
+                return k
             }
         }
         return 0
@@ -79,7 +87,7 @@ class AllEntries {
                     rcontent := tempData[2]
                     enabled := tempData[3]
                     parent := tempData[4]
-                    newentry := new Entry(rcommand, rcontent, this, parent)
+                    newentry := new Entry(rcommand, rcontent, parent)
                     if enabled == "1"
                         newentry.Enable()
                     else
@@ -91,9 +99,8 @@ class AllEntries {
 }
 
 Class Entry {
-    static parent := 0
-    static children := []
-    static globalEntryList := 0
+    parent := 0
+    children := []
 
     Command {
         get {
@@ -101,7 +108,7 @@ Class Entry {
         }
         set {
             this._command := value
-            this.globalEntryList.SaveAllToFile()
+            entries.SaveAllToFile()
         }
     }
 
@@ -111,10 +118,11 @@ Class Entry {
         }
         set {
             this._content := value
-            this.globalEntryList.SaveAllToFile()
+            entries.SaveAllToFile()
         }
     }
 
+    ; Fix this tomorrow, make sure the regex changes object and makes new objects as children
     Enabled {
         get {
             return this._enabled
@@ -122,14 +130,14 @@ Class Entry {
         set {
             this._enabled := value
             HotString(this.Command, this.content, this._enabled)
-            this.globalEntryList.SaveAllToFile()
+            entries.SaveAllToFile()
         }
     }
 
-    __New(command, content, globalEntryList, parent:=0) {
-        this.globalEntryList := globalEntryList
+    __New(command, content, parent:=0) {
         this.Command := this.PadCommand(command)
         this.Content := content
+        this.CheckRegex()
         this.Enabled := 0
         this.AddParent(parent)
         allEntries.Insert(this)
@@ -138,17 +146,61 @@ Class Entry {
 
     AddParent(parentC) {
         if (parentC != 0) {
-            parentO := this.globalEntryList.Get(parentC)
+            parentO := entries.Get(parentC)
             this.parent := parentO
             this.parent.AddChild(this)
         }
+    }
+
+    GetParent() {
+        if (this.parent != 0) {
+            return this.parent.Command
+        }
+        return "0"
     }
 
     AddChild(child) {
         this.children.Insert(child)
     }
 
+    CheckRegex() {
+        if (RegExMatch(this.Command, "\$<.+\$>") > 0 && RegExMatch(this.Content, "\$<i\$>") > 0) {
+            posO := RegExMatch(this.Command, "P)\$<[(\d*\w*)+\,?\s*]+\$>", lenO)
+            match := SubStr(this.Command, posO + 2, lenO - 4)
+            matches := this.GetAllMatches(match, "P)(\d*\w*\,*\s*)")
+            matches := this.CleanUpMatches(matches)
+        }
+    }
+
+    CleanUpMatches(matches) {
+        for k, v in matches {
+            matches[k] := RegExReplace(matches[k], "\,*", "")
+            matches[k] := RegExReplace(matches[k], "^\s+", "")
+            matches[k] := RegExReplace(matches[k], "\s+$", "")
+        }
+    }
+
+    GetAllMatches(string, regex) {
+        matches := []
+        while (StrLen(string) > 0) {
+            position := RegExMatch(string, regex, length)
+            matches.Insert(SubStr(string, position, length))
+            StringTrimLeft, string, string, length
+        }
+        return matches
+    }
+
     Remove() {
+        entries.entries.RemoveAt(entries.GetIndex(this.Command))
+        if (this.parent != 0) {
+            this.parent.Remove()
+        }
+        if (this.children.MaxIndex() > 0) {
+            for k, v in this.children {
+                v.parent := 0
+                v.Remove()
+            }
+        }
         this.Disable()
     }
 
@@ -168,10 +220,7 @@ Class Entry {
     }
 
     ToString() {
-        if this.parent != 0
-            return this.Command . "|" . this.Content . "|" . this.enabled . "|" . this.parent
-        else
-            return this.Command . "|" . this.Content . "|" . this.enabled . "|" . this.parent.Command
+        return this.Command . "|" . this.Content . "|" . this.enabled . "|" . this.GetParent()
     }
 
     ; Maybe one day do proper GUI instead of tray?
@@ -184,6 +233,9 @@ Class Entry {
         while (StrLen(output) < 16 + 64)
             output .= " "
         output .= this.Enabled
+        while (StrLen(output) < 16 + 64 + 4)
+            output .= " "
+        output .= RegExReplace(this.GetParent(), ":o:", "")
         return output
     }
 }
@@ -192,18 +244,7 @@ Class Entry {
 global entries := new AllEntries()
 entries.ReadFile()
 
-new Entry("test", "test123", entries).Enable()
-new Entry("test1", "testasd", entries).Enable()
-new Entry("test2", "test1gfg", entries).Enable()
-new Entry("test3", "test1fga3", entries).Enable()
-new Entry("test4", "test1fga4", entries, ":o:test3").Enable()
-new Entry("test5", "test1fga5", entries, ":o:test3").Enable()
-new Entry("test6", "test1fga6", entries, ":o:test3").Enable()
-
-; asd1 := RegExMatch("asdfasfg$<asd, 2, 1, 4, 5$>", "\$<[(\d*\w*)+\,?\s*]+\$>", test123, 1)
-; dfsajdh := new Entry("test", "test2")
-; dfsajdh.PadCommand()
-; tooltip, asd1
+new Entry("test$<1, 2, 3, bacd, fashg, fhidu78, ghauie$>", "test$<i$>")
 
 AddMacroTray() {
     Gui, Show
@@ -223,8 +264,10 @@ OpenModMenu() {
     Menu, modMenu, Add
     Menu, modMenu, DeleteAll
     for k, v in entries.entries {
-        output := v.TidyString()
-        Menu, modMenu, Add, %output%, ModMacro
+        if (v.parent == 0 && v.children.MaxIndex() == "") {
+            output := v.TidyString()
+            Menu, modMenu, Add, %output%, ModMacro
+        }
     }
     Menu, modMenu, Show
 }
@@ -270,7 +313,7 @@ Gui, Add, Edit, r1 w300 vGUIContent
 
 HandleInput(command, content) {
     if (StrLen(command) > 0 && StrLen(content) > 0) {
-        new Entry(command, content, entries).Enable()
+        new Entry(command, content).Enable()
         ControlSetText, Edit1,
         ControlSetText, Edit2,
     }
