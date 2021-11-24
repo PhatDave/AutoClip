@@ -35,7 +35,7 @@ b64Decode(string)
 global timer := 0
 
 Save() {
-    SetTimer, SaveAllToFile, 20
+    SetTimer, SaveAllToFile, 200
 }
 
 SaveAllToFile() {
@@ -108,6 +108,8 @@ class AllEntries {
 
     FixContent(content) {
         content := RegExReplace(content, "`n$`")
+        ; Assuring backwards compatibility with 1.x
+        content := RegExReplace(content, " ", "¨")
         ; content := RegExReplace(content, "\$spc\$", " ")
         return content
     }
@@ -129,12 +131,12 @@ Class Entry {
 
     Content {
         get {
-            ; RegExReplace(this.Content, "\s", "$spc$")
-            return RegExReplace(this._content, "\$spc\$", " ")
+            outContent := RegExReplace(this._content, "¨", " ")
+            return outContent
         }
         set {
-            ; RegExReplace(content, "\$spc\$", " ")
-            this._content := RegExReplace(value, "\s", "$spc$")
+            newValue := RegExReplace(value, "\s", "¨")
+            this._content := newValue
             Save()
         }
     }
@@ -145,7 +147,7 @@ Class Entry {
         }
         set {
             this._enabled := value
-            HotString(this.Command, this.content, this._enabled)
+            HotString(this.Command, this.Content, this._enabled)
             Save()
         }
     }
@@ -156,7 +158,7 @@ Class Entry {
         this.CheckRegex()
         this.Enabled := 0
         this.AddParent(parent)
-        allEntries.Insert(this)
+        entries.Insert(this)
         return this
     }
 
@@ -259,7 +261,9 @@ Class Entry {
     }
 
     ToString() {
-        return this.Command . "|" . this.Content . "|" . this.enabled . "|" . this.GetParent()
+        debugC := this._content
+        fuckoff := this.Content
+        return this.Command . "|" . this._content . "|" . this.enabled . "|" . this.GetParent()
     }
 
     ; Maybe one day do proper GUI instead of tray?
@@ -323,7 +327,7 @@ ModMacro() {
         Gui, Show
         ControlSetText, Edit1, %modCommand%, ahk_class AutoHotkeyGUI
         ControlSetText, Edit2, %modContent%, ahk_class AutoHotkeyGUI
-        entries.Remove(modCommand)
+        entries.Remove(modEntry.PadCommand(modCommand))
     }
 }
 
