@@ -122,7 +122,6 @@ Class Entry {
         }
     }
 
-    ; Fix this tomorrow, make sure the regex changes object and makes new objects as children
     Enabled {
         get {
             return this._enabled
@@ -144,9 +143,8 @@ Class Entry {
         return this
     }
 
-    AddParent(parentC) {
-        if (parentC != 0) {
-            parentO := entries.Get(parentC)
+    AddParent(parentO) {
+        if (parentO != 0) {
             this.parent := parentO
             this.parent.AddChild(this)
         }
@@ -169,6 +167,21 @@ Class Entry {
             match := SubStr(this.Command, posO + 2, lenO - 4)
             matches := this.GetAllMatches(match, "P)(\d*\w*\,*\s*)")
             matches := this.CleanUpMatches(matches)
+
+            baseCommand := this.Command
+            baseContent := this.Content
+
+            pos := RegExMatch(this.Content, "P)\$<i\$>", len)
+            this.Command := RegExReplace(this.Command, "\$<[(\d*\w*)+\,?\s*]+\$>", matches[1])
+            this.Content := RegExReplace(this.Content, "\$<i\$>", matches[1])
+            matches.RemoveAt(1)
+            allEntries.Insert(this)
+
+            for k, v in matches {
+                newCommand := RegExReplace(baseCommand, "\$<[(\d*\w*)+\,?\s*]+\$>", v)
+                newContent := RegExReplace(baseContent, "\$<i\$>", v)
+                new Entry(newCommand, newContent, this).Enable()
+            }
         }
     }
 
@@ -178,6 +191,7 @@ Class Entry {
             matches[k] := RegExReplace(matches[k], "^\s+", "")
             matches[k] := RegExReplace(matches[k], "\s+$", "")
         }
+        return matches
     }
 
     GetAllMatches(string, regex) {
