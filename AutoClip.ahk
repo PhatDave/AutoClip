@@ -66,6 +66,9 @@ class AllEntries {
     }
 
     Get(command) {
+        if (!InStr(command, ":o:")) {
+            command := Entry.PadCommand(command)
+        }
         for k, v in this.entries {
             if v.Command == command {
                 return v
@@ -266,25 +269,10 @@ Class Entry {
         fuckoff := this.Content
         return this.Command . "|" . this._content . "|" . this.enabled . "|" . this.GetParent()
     }
-
-    ; Maybe one day do proper GUI instead of tray?
-    TidyString() {
-        output := ""
-        output .= this.Command
-        while (StrLen(output) < 16)
-            output .= " "
-        output .= this.Content
-        while (StrLen(output) < 16 + 64)
-            output .= " "
-        output .= this.Enabled
-        while (StrLen(output) < 16 + 64 + 4)
-            output .= " "
-        output .= RegExReplace(this.GetParent(), ":o:", "")
-        return output
-    }
-
-    ToEditString() {
-        return this.Command . " " . this.Content . " " . this.Enabled . " " . RegExReplace(this.GetParent(), ":o:", "")
+    
+    HasChildren() {
+        index := this.children.MaxIndex()
+        return index != ""
     }
 }
 
@@ -302,7 +290,7 @@ Class UI {
         }
     }
 
-    DisalbeAll() {
+    DisableAll() {
         for k,v in this.UIs {
             v.isDefault := false
         }
@@ -324,39 +312,159 @@ Class UI {
         this.Assemble()
     }
 
-    Display() {
+    Show() {
         this.SetDefault()
         Gui, Show
+    }
+
+    Hide() {
+        this.SetDefault()
+        Gui, Hide
     }
 }
 
 class MainUI extends UI {
     Assemble() {
-        static Command
-        static Content
+        uiName := this.name
 
-        Gui, Add, Text,, Enter the command to trigger clip
-        Gui, Add, Edit, r1 w300 vCommand
-        Gui, Add, Text,, Enter the clip to be pasted
-        Gui, Add, Edit, r1 w300 vContent
+        Gui, %uiName%:Add, Text,, Enter the command to trigger clip
+        Gui, %uiName%:Add, Edit, r1 w300
+        Gui, %uiName%:Add, Text,, Enter the clip to be pasted
+        Gui, %uiName%:Add, Edit, r1 w300
     }
 
     HandleInput() {
+        uiName := this.name
+        Gui, %uiName%:Submit
+        Gui, %uiName%:Hide
+
         ControlGetText, commandI, Edit1
         ControlGetText, contentI, Edit2
         if (StrLen(commandI) > 0 && StrLen(contentI) > 0) {
             new Entry(commandI, contentI).Enable()
-            ControlSetText, Edit1,
-            ControlSetText, Edit2,
+            GuiControl,, Edit1,
+            GuiControl,, Edit2,
+        }
+    }
+
+    DisplayEntry(entry) {
+        if (entry) {
+            this.Show()
+
+            command := RegExReplace(entry.command, ":o:", "")
+            content := entry.content
+
+            uiName := this.name
+            GuiControl,, Edit1, %command%
+            GuiControl,, Edit2, %content%
         }
     }
 }
 
 class EditUI extends UI {
     Assemble() {
-        static EditList
+        uiName := this.name
 
-        Gui, Add, ListView, vEditList w600 h600, Command|Content|Enabled|Parent
+        Gui, %uiName%:Add, ListView, -Multi w600 h600, Command|Content|Enabled
+    }
+
+    HandleInput() {
+        if (this.isDefault) {
+            uiName := this.name
+            Gui, %uiName%:Hide
+            this.SetDefault()
+            ; Gui, %uiName%:Default
+
+            selectedRow := LV_GetNext()
+            LV_GetText(command, selectedRow, 1)
+            LV_GetText(content, selectedRow, 2)
+            LV_GetText(enabled, selectedRow, 3)
+
+            modEntry := entries.Get(command)
+            MainUIO.DisplayEntry(modEntry)
+            entries.Remove(command)
+        }
+    }
+
+    SetAll() {
+        this.SetDefault()
+
+        LV_Delete()
+        for k, v in entries.entries {
+            if (!v.parent && !v.HasChildren()) {
+                LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled)
+            }
+        }
+        LV_ModifyCol()
+        Gui, Show
+    }
+}
+
+class ToggleUI extends UI {
+    Assemble() {
+        uiName := this.name
+
+        Gui, %uiName%:Add, ListView, w600 h600, Command|Content|Enabled
+    }
+
+    HandleInput() {
+        if (this.isDefault) {
+            uiName := this.name
+            this.SetDefault()
+            Gui, %uiName%:Hide
+            ; Gui, %uiName%:Default
+
+            firstRun := 1
+            selectedRow := 0
+            while(selectedRow || firstRun) {
+                if (firstRun) {
+                    firstRun := 0
+                }
+                selectedRow := LV_GetNext(selectedRow)
+                LV_GetText(command, selectedRow, 1)
+                LV_GetText(content, selectedRow, 2)
+                LV_GetText(enabled, selectedRow, 3)
+
+                modEntry := entries.Get(command)
+                modEntry.Toggle()
+            }
+        }
+    }
+
+    SetAll() {
+        this.SetDefault()
+
+        LV_Delete()
+        for k, v in entries.entries {
+            LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled)
+        }
+        LV_ModifyCol()
+        Gui, Show
+    }
+}
+
+class RemoveUI extends ToggleUI {
+    HandleInput() {
+        if (this.isDefault) {
+            uiName := this.name
+            this.SetDefault()
+            Gui, %uiName%:Hide
+            ; Gui, %uiName%:Default
+
+            firstRun := 1
+            selectedRow := 0
+            while(selectedRow || firstRun) {
+                if (firstRun) {
+                    firstRun := 0
+                }
+                selectedRow := LV_GetNext(selectedRow)
+                LV_GetText(command, selectedRow, 1)
+                LV_GetText(content, selectedRow, 2)
+                LV_GetText(enabled, selectedRow, 3)
+
+                modEntry := entries.Remove(command)
+            }
+        }
     }
 }
 
@@ -365,66 +473,26 @@ entries.ReadFile()
 
 global MainUIO := new MainUI("Main")
 global EditUIO := new EditUI("Edit")
-
+global ToggleUIO := new ToggleUI("Toggle")
+global RemoveUIO := new RemoveUI("Remove")
 
 AddMacroTray() {
-    Gui, Main:Default
-    Gui, Show
+    MainUIO.Show()
 }
 
 OpenRemoveMenu() {
-    Menu, macroMenu, Add
-    Menu, macroMenu, DeleteAll
-    for k, v in entries.entries {
-        output := v.TidyString()
-        Menu, macroMenu, Add, %output%, RemoveMacro
-    }
-    Menu, macroMenu, Show
-}
-
-RemoveMacro() {
-    entries.Remove(StrSplit(A_ThisMenuItem, " ")[1])
+    RemoveUIO.SetAll()
+    RemoveUIO.Show()
 }
 
 OpenModMenu() {
-    Gui, EditMenu:Default
-    Gui, Show
-
-    for k, v in entries.entries {
-        if (v.parent == 0 && v.children.MaxIndex() == "") {
-        LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled, v.parent)
-        }
-    }
-    LV_ModifyCol()
-    Gui, Show
-}
-
-ModMacro() {
-    modCommand := StrSplit(A_ThisMenuItem, " ")[1]
-    modEntry := entries.Get(modCommand)
-    modContent := modEntry.Content
-    modCommand := RegExReplace(modCommand, ":o:", "")
-    if (modEntry) {
-        Gui, Main:Default
-        Gui, Show
-        ControlSetText, Edit1, %modCommand%, ahk_class AutoHotkeyGUI
-        ControlSetText, Edit2, %modContent%, ahk_class AutoHotkeyGUI
-        entries.Remove(modEntry.PadCommand(modCommand))
-    }
+    EditUIO.SetAll()
+    EditUIO.Show()
 }
 
 OpenToggleMenu() {
-    EditUIO.Display()
-    LV_Delete()
-    for k, v in entries.entries {
-        LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled, v.parent)
-    }
-    LV_ModifyCol()
-    Gui, Show
-}
-
-ToggleMacro() {
-    entries.Get(StrSplit(A_ThisMenuItem, " ")[1]).Toggle()
+    ToggleUIO.SetAll()
+    ToggleUIO.Show()
 }
 
 Reload() {
@@ -441,15 +509,19 @@ MakeTrayMenu() {
 
 MakeTrayMenu()
 
+~Esc::
+    if (WinActive("ahk_class AutoHotkeyGUI")) {
+        UI.GetDefault().Hide()
+    }
+return
+
 ~Enter::
     if (WinActive("ahk_class AutoHotkeyGUI")) {
-        Gui, Submit
         UI.GetDefault().HandleInput()
     }
 return
 
 GuiClose:
-    Gui, Submit
     UI.GetDefault().HandleInput()
 return
 
