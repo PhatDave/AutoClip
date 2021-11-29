@@ -33,6 +33,7 @@ b64Decode(string)
 }
 
 global timer := 0
+global currentDefaultUI := ""
 
 Save() {
     SetTimer, SaveAllToFile, 20
@@ -281,14 +282,93 @@ Class Entry {
         output .= RegExReplace(this.GetParent(), ":o:", "")
         return output
     }
+
+    ToEditString() {
+        return this.Command . " " . this.Content . " " . this.Enabled . " " . RegExReplace(this.GetParent(), ":o:", "")
+    }
 }
 
+Class UI {
+    static UIs := {}
+    isDefault := false
+    name := ""
+
+    SetDefault() {
+        this.DisableAll()
+        this.isDefault := true
+        tempname := this.name
+        if (StrLen(tempname) > 0) {
+            Gui, %tempname%:Default
+        }
+    }
+
+    DisalbeAll() {
+        for k,v in this.UIs {
+            v.isDefault := false
+        }
+    }
+
+    GetDefault() {
+        for k,v in this.UIs {
+            if v.isDefault {
+                return v
+            }
+        }
+    }
+
+    __New(name) {
+        this.UIs.Insert(this)
+        this.name := name
+        Gui, New,, %name%
+        this.SetDefault()
+        this.Assemble()
+    }
+
+    Display() {
+        this.SetDefault()
+        Gui, Show
+    }
+}
+
+class MainUI extends UI {
+    Assemble() {
+        static Command
+        static Content
+
+        Gui, Add, Text,, Enter the command to trigger clip
+        Gui, Add, Edit, r1 w300 vCommand
+        Gui, Add, Text,, Enter the clip to be pasted
+        Gui, Add, Edit, r1 w300 vContent
+    }
+
+    HandleInput() {
+        ControlGetText, commandI, Edit1
+        ControlGetText, contentI, Edit2
+        if (StrLen(commandI) > 0 && StrLen(contentI) > 0) {
+            new Entry(commandI, contentI).Enable()
+            ControlSetText, Edit1,
+            ControlSetText, Edit2,
+        }
+    }
+}
+
+class EditUI extends UI {
+    Assemble() {
+        static EditList
+
+        Gui, Add, ListView, vEditList w600 h600, Command|Content|Enabled|Parent
+    }
+}
 
 global entries := new AllEntries()
 entries.ReadFile()
 
+global MainUIO := new MainUI("Main")
+global EditUIO := new EditUI("Edit")
+
 
 AddMacroTray() {
+    Gui, Main:Default
     Gui, Show
 }
 
@@ -307,15 +387,16 @@ RemoveMacro() {
 }
 
 OpenModMenu() {
-    Menu, modMenu, Add
-    Menu, modMenu, DeleteAll
+    Gui, EditMenu:Default
+    Gui, Show
+
     for k, v in entries.entries {
         if (v.parent == 0 && v.children.MaxIndex() == "") {
-            output := v.TidyString()
-            Menu, modMenu, Add, %output%, ModMacro
+        LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled, v.parent)
         }
     }
-    Menu, modMenu, Show
+    LV_ModifyCol()
+    Gui, Show
 }
 
 ModMacro() {
@@ -324,6 +405,7 @@ ModMacro() {
     modContent := modEntry.Content
     modCommand := RegExReplace(modCommand, ":o:", "")
     if (modEntry) {
+        Gui, Main:Default
         Gui, Show
         ControlSetText, Edit1, %modCommand%, ahk_class AutoHotkeyGUI
         ControlSetText, Edit2, %modContent%, ahk_class AutoHotkeyGUI
@@ -332,18 +414,17 @@ ModMacro() {
 }
 
 OpenToggleMenu() {
-    Menu, macroMenu, Add
-    Menu, macroMenu, DeleteAll
+    EditUIO.Display()
+    LV_Delete()
     for k, v in entries.entries {
-        output := v.TidyString()
-        Menu, macroMenu, Add, %output%, ToggleMacro
+        LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled, v.parent)
     }
-    Menu, macroMenu, Show
+    LV_ModifyCol()
+    Gui, Show
 }
 
 ToggleMacro() {
     entries.Get(StrSplit(A_ThisMenuItem, " ")[1]).Toggle()
-    ; OpenToggleMenu()
 }
 
 Reload() {
@@ -360,34 +441,16 @@ MakeTrayMenu() {
 
 MakeTrayMenu()
 
-; Gui
-global vGUICommand := ""
-global vGUIContent := ""
-Gui, Add, Text,, Enter the command to trigger clip
-Gui, Add, Edit, r1 w300 vGUICommand
-Gui, Add, Text,, Enter the clip to be pasted
-Gui, Add, Edit, r1 w300 vGUIContent
-; Gui, Show
-
-HandleInput(command, content) {
-    if (StrLen(command) > 0 && StrLen(content) > 0) {
-        ; content := RegExReplace(content, "`n$", "")
-        new Entry(command, content).Enable()
-        ControlSetText, Edit1,
-        ControlSetText, Edit2,
-    }
-}
-
 ~Enter::
     if (WinActive("ahk_class AutoHotkeyGUI")) {
         Gui, Submit
-        HandleInput(GUICommand, GUIContent)
+        UI.GetDefault().HandleInput()
     }
 return
 
 GuiClose:
     Gui, Submit
-    HandleInput(GUICommand, GUIContent)
+    UI.GetDefault().HandleInput()
 return
 
 +!c::
