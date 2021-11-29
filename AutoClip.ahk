@@ -50,6 +50,20 @@ SaveAllToFile() {
     SetTimer, SaveAllToFile, Off
 }
 
+; Source: https://www.autohotkey.com/board/topic/93570-sortarray/
+sortArray(arr,options="") {
+	new :=	[]
+    list := ""
+	For each, item in arr
+		list .=	item "`n"
+	list :=	Trim(list,"`n")
+	Sort, list, %options%
+	Loop, parse, list, `n, `r
+		new.Insert(A_LoopField)
+	return	new
+
+}
+
 class AllEntries {
     static entries := []
 
@@ -116,6 +130,16 @@ class AllEntries {
         content := RegExReplace(content, " ", "¨")
         ; content := RegExReplace(content, "\$spc\$", " ")
         return content
+    }
+
+    Swap(key1, key2) {
+        temp := this.entries[key1]
+        this.entries[key1] := this.entries[key2]
+        this.entries[key2] := temp
+    }
+
+    Sort() {
+        sortArray(this.entries)
     }
 }
 
@@ -388,6 +412,7 @@ class EditUI extends UI {
 
     SetAll() {
         this.SetDefault()
+        entries.Sort()
 
         LV_Delete()
         for k, v in entries.entries {
@@ -433,6 +458,7 @@ class ToggleUI extends UI {
 
     SetAll() {
         this.SetDefault()
+        entries.Sort()
 
         LV_Delete()
         for k, v in entries.entries {
@@ -475,6 +501,7 @@ global MainUIO := new MainUI("Main")
 global EditUIO := new EditUI("Edit")
 global ToggleUIO := new ToggleUI("Toggle")
 global RemoveUIO := new RemoveUI("Remove")
+
 
 AddMacroTray() {
     MainUIO.Show()
