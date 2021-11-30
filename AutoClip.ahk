@@ -4,7 +4,6 @@ SendMode Input
 SetWorkingDir %A_ScriptDir%
 #SingleInstance force
 #Persistent
-#Hotstring r
 
 SetBatchLines, -1
 
@@ -55,12 +54,12 @@ sortArray(arr,options="") {
 	new :=	[]
     list := ""
 	For each, item in arr
-		list .=	item "`n"
-	list :=	Trim(list,"`n")
+		list .=	item.Command "`n"
+	list :=	Trim(list, "`n")
 	Sort, list, %options%
 	Loop, parse, list, `n, `r
-		new.Insert(A_LoopField)
-	return	new
+		new.Insert(entries.Get(A_LoopField))
+	return new
 
 }
 
@@ -104,7 +103,20 @@ class AllEntries {
         IfNotExist, Macros.txt
             FileAppend,, Macros.txt
         FileRead, macros, Macros.txt
-        for index, macro in StrSplit(macros, "`n") {
+
+        data := StrSplit(macros, "`n")
+
+        lastGoodEntry := 1
+        for k,v in data {
+            if (SubStr(v, 1, 4) != "Om86") {
+                data[lastGoodEntry] .= v
+                data[k] := ""
+            } else {
+                lastGoodEntry := k
+            }
+        }
+
+        for index, macro in data {
             if (StrLen(macro) > 3) {
                 macro := b64Decode(macro)
                 tempData := StrSplit(macro, "|")
@@ -139,7 +151,7 @@ class AllEntries {
     }
 
     Sort() {
-        sortArray(this.entries)
+        this.entries := sortArray(this.entries)
     }
 }
 
