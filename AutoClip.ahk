@@ -164,6 +164,7 @@ class EntriesSubsetFilter extends AllEntries {
     }
 
     FilterBy(inputStr) {
+        this.entries := []
         for k, v in AllEntries.entries {
             if (this.FitsCriteria(inputStr, v)) {
                 this.entries.Insert(k, v)
@@ -172,6 +173,12 @@ class EntriesSubsetFilter extends AllEntries {
     }
 
     FitsCriteria(inputStr, entry) {
+        words := StrSplit(inputStr, " ")
+        for k, v in words {
+            if (!InStr(entry._content, v)) {
+                return false
+            }
+        }
         return true
     }
 }
@@ -431,7 +438,6 @@ class EditUI extends UI {
         ControlGetText, inputText, Edit1
         EntriesSubsetFilter.filterBy(inputText)
         this.SetAll(EntriesSubsetFilter)
-        ; TODO: filter by input text yes
     }
 
     HandleInput() {
