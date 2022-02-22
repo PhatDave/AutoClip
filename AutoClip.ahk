@@ -33,13 +33,30 @@ b64Decode(string)
 
 global timer := 0
 global currentDefaultUI := ""
-; global SearchBoxText := ""
+global backupNo := 5
 
 Save() {
     SetTimer, SaveAllToFile, 20
 }
 
+BackupAll() {
+    FileCreateDir, macroBackup
+    Loop % backupNo
+    {
+        test := backupNo - A_Index
+        if (test > 0) {
+            curFile := Format("macroBackup\backup{1}.txt", test)
+            prevFile := Format("macroBackup\backup{1}.txt", test - 1)
+            FileCopy, %prevFile%, %curFile%
+        } else if (test == 0) {
+            target := Format("macroBackup\backup{1}.txt", test)
+            FileCopy, macros.txt, %target%
+        }
+    }
+}
+
 SaveAllToFile() {
+    BackupAll()
     file := FileOpen("Macros.txt", "W")
     for k, v in entries.entries {
         eString := v.ToString()
@@ -584,9 +601,6 @@ MakeTrayMenu() {
 
 MakeTrayMenu()
 
-; TODO: Remove for production
-OpenModMenu()
-
 ApplySearch:
     EditUIO.ApplySearch()
 return
@@ -612,7 +626,3 @@ return
     Sleep, 20
     Run, https://www.google.com/search?q=%clipboard%
 return
-
-; TODO: implement search on modify
-; TODO: maybe even on remove?
-; TODO: maybe have backup folder and backup (up to like 5 or something) on every operation? or maybe every time script starts up or exits maybe
