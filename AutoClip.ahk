@@ -81,6 +81,7 @@ DeleteFirstBackup(backups) {
 }
 
 SaveAllToFile() {
+	Backup()
 	file := FileOpen("Macros.txt", "W")
 	debugCount := AllEntries.entries.Length()
 	for k, v in AllEntries.entries {
