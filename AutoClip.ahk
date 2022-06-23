@@ -6,15 +6,18 @@ SetWorkingDir %A_ScriptDir%
 
 SetBatchLines, -1
 
-IfExist, mergedinclude.ahk
+CreateMergedIncludeFile() {
+	IfExist, mergedinclude.ahk
 	FileDelete, mergedinclude.ahk
 
-merged := ""
-Loop, Files, %A_ScriptDir%\scripts\*.*
-{
-	FileRead, merged, %A_LoopFileFullPath%
-	FileAppend, %merged%`n, mergedinclude.ahk
+	merged := ""
+	Loop, Files, %A_ScriptDir%\scripts\*.*
+	{
+		FileRead, merged, %A_LoopFileFullPath%
+		FileAppend, %merged%`n, mergedinclude.ahk
+	}
 }
+CreateMergedIncludeFile()
 #Include *i mergedinclude.ahk
 
 ; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
@@ -44,6 +47,7 @@ b64Decode(string)
 global timer := 0
 global currentDefaultUI := ""
 global backupNo := 150
+global IsScript := False
 
 Backup() {
 	FileCreateDir, backups
@@ -90,10 +94,11 @@ SaveAllToFile() {
 }
 
 Save() {
-	SetTimer, SaveAllToFile, 1000
+	SetTimer, SaveAllToFile, 500
 }
 
 SafeReload() {
+	CreateMergedIncludeFile()
 	SaveAllToFile()
 	reload
 }
@@ -128,9 +133,6 @@ class AllEntries {
 	}
 
 	Get(command) {
-		if (!InStr(command, ":o:")) {
-			command := Entry.PadCommand(command)
-		}
 		for k, v in this.entries {
 			if v.Command == command {
 				return v
@@ -226,7 +228,6 @@ class AllEntries {
 			MsgBox, BigError
 			exit
 		}
-		this.entries.Insert(parsedEntry)
 	}
 
 	ParseEntry(line) {
@@ -251,15 +252,21 @@ class AllEntries {
 		macro := b64Decode(line)
 		tempData := StrSplit(macro, "|")
 		rcommand := tempData[1]
-		rcontent := this.FixContent(tempData[2])
-		isenabled := tempData[3]
+		temp2 := StrSplit(rcommand, ":")
+		rcommand := temp2[3]
+
+		isenabled := tempData[2]
+		isInitial := tempData[3]
 		if (isenabled == "")
 			isenabled := 1
-		newentry := new ScriptEntry(rcommand, rcontent)
+		newentry := new ScriptEntry(rcommand)
 		if (isenabled == 1) {
 			newentry.Enable()
 		} else {
 			newentry.Disable()
+		}
+		if (isInitial == "1") {
+			newentry.Enable()
 		}
 		return newEntry
 	}
@@ -468,12 +475,28 @@ Class Entry {
 }
 
 class ScriptEntry extends Entry {
-	__New(command, function) {
+	initial := 1
+	Enabled {
+		get {
+			return this._enabled
+		}
+		set {
+			this._enabled := value
+		}
+	}
+
+	Enable() {
+		this.initial := 0
+		this.Enabled := 1
+		HotString(this.Command, this.StripCommand(), this._enabled)
+		Save()
+	}
+
+	__New(command) {
 		this.Command := this.PadCommand(command)
-		this.Content := function
 		this.CheckRegex()
+		this.Content := ""
 		this.Enabled := 0
-		this.AddParent(parent)
 		entries.Insert(this)
 		return this
 	}
@@ -483,6 +506,24 @@ class ScriptEntry extends Entry {
 			command := ":Xo:" . command
 		}
 		return command
+	}
+
+	StripCommand() {
+		temp2 := StrSplit(this.Command, ":")
+		return temp2[3]
+	}
+
+	Remove() {
+		entries.entries.RemoveAt(entries.GetIndex(this.Command))
+		fileName := "scripts\" . this.Command . ".ahk"
+		FileDelete, %fileName%
+		this.Disable()
+	}
+
+	ToString() {
+		debugC := this._content
+		fuckoff := this.Content
+		return this.Command . "|" . this.enabled . "|" . this.initial
 	}
 }
 
@@ -550,6 +591,7 @@ class MainUI extends UI {
 
 		Gui, %uiName%:Add, Text,, Enter the command to trigger clip
 		Gui, %uiName%:Add, Edit, r1 w300
+		Gui, %uiName%:Add, CheckBox, vIsScript, Is script?
 		Gui, %uiName%:Add, Text,, Enter the clip to be pasted
 		Gui, %uiName%:Add, Edit, r16 w300
 	}
@@ -562,10 +604,23 @@ class MainUI extends UI {
 		ControlGetText, commandI, Edit1
 		ControlGetText, contentI, Edit2
 		if (StrLen(commandI) > 0 && StrLen(contentI) > 0) {
-			new Entry(commandI, contentI).Enable()
+			if (IsScript == "1") {
+				fileName := ".\scripts\" . commandI . ".ahk"
+				fileContent := ""
+				IfExist, %fileName%
+					FileDelete, %fileName%
+
+				fileContent := fileContent . commandI . "() {`r`n" . contentI . "`r`n}"
+				FileAppend, %fileContent%, %fileName%
+				new ScriptEntry(commandI, contentI)
+				SafeReload()
+			} else {
+				new Entry(commandI, contentI).Enable()
+			}
 			GuiControl,, Edit1,
 			GuiControl,, Edit2,
 		}
+		Save()
 	}
 
 	DisplayEntry(entry) {
@@ -623,6 +678,9 @@ class EditUI extends UI {
 
 		LV_Delete()
 		for k, v in entries.entries {
+			if (InStr(v.Command, ":Xo:")) {
+				continue
+			}
 			if (!v.parent && !v.HasChildren()) {
 				LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled)
 			}
