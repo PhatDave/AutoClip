@@ -780,6 +780,8 @@ global MainUIO := new MainUI("Main")
 global EditUIO := new EditUI("Edit")
 global ToggleUIO := new ToggleUI("Toggle")
 global RemoveUIO := new RemoveUI("Remove")
+; For some reason RemoveUIO is default by default :?
+RemoveUIO.isDefault := false
 
 
 AddMacroTray() {
