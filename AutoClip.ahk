@@ -36,7 +36,7 @@ global currentDefaultUI := ""
 global backupNo := 20
 
 Save() {
-    SetTimer, SaveAllToFile, 20
+    SetTimer, SaveAllToFile, 1000
 }
 
 BackupAll() {
@@ -411,7 +411,7 @@ class MainUI extends UI {
         Gui, %uiName%:Add, Text,, Enter the command to trigger clip
         Gui, %uiName%:Add, Edit, r1 w300
         Gui, %uiName%:Add, Text,, Enter the clip to be pasted
-        Gui, %uiName%:Add, Edit, r1 w300
+        Gui, %uiName%:Add, Edit, r16 w300
     }
 
     HandleInput() {
