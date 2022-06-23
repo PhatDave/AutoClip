@@ -579,6 +579,7 @@ OpenRemoveMenu() {
 
 OpenModMenu() {
     EditUIO.SetAll(entries)
+    EditUIO.ApplySearch()
     EditUIO.Show()
 }
 
