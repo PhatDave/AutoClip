@@ -3,7 +3,6 @@ SendMode Input
 SetWorkingDir %A_ScriptDir%
 #SingleInstance force
 #Persistent
-#Warn, All, Off
 
 SetBatchLines, -1
 
@@ -219,7 +218,7 @@ class AllEntries {
 
 		if (SubStr(line, 1, 4) == "Om86") {
 			parsedEntry := this.ParseEntry(line)
-		} else if (SubStr(line, 1, 8) == "OlhvOg==") {
+		} else if (SubStr(line, 1, 5) == "OlhvO") {
 			parsedEntry := this.ParseScriptEntry(line)
 		}
 
@@ -249,7 +248,20 @@ class AllEntries {
 	}
 
 	ParseScriptEntry(line) {
-		; TODO Implement
+		macro := b64Decode(line)
+		tempData := StrSplit(macro, "|")
+		rcommand := tempData[1]
+		rcontent := this.FixContent(tempData[2])
+		isenabled := tempData[3]
+		if (isenabled == "")
+			isenabled := 1
+		newentry := new ScriptEntry(rcommand, rcontent)
+		if (isenabled == 1) {
+			newentry.Enable()
+		} else {
+			newentry.Disable()
+		}
+		return newEntry
 	}
 
 	FixContent(content) {
@@ -456,7 +468,22 @@ Class Entry {
 }
 
 class ScriptEntry extends Entry {
+	__New(command, function) {
+		this.Command := this.PadCommand(command)
+		this.Content := function
+		this.CheckRegex()
+		this.Enabled := 0
+		this.AddParent(parent)
+		entries.Insert(this)
+		return this
+	}
 
+	PadCommand(command) {
+		if (!InStr(command, ":Xo:")) {
+			command := ":Xo:" . command
+		}
+		return command
+	}
 }
 
 Class UI {
