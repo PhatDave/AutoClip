@@ -519,7 +519,7 @@ class ScriptEntry extends Entry {
 
 	Remove() {
 		AllEntries.entries.RemoveAt(globalEntries.GetIndex(this.Command))
-		fileName := "scripts\" . this.Command . ".ahk"
+		fileName := "scripts\" . this.StripCommand() . ".ahk"
 		FileDelete, %fileName%
 		this.Disable()
 	}
