@@ -46,10 +46,6 @@ global timer := 0
 global currentDefaultUI := ""
 global backupNo := 150
 
-Save() {
-	SetTimer, SaveAllToFile, 1000
-}
-
 Backup() {
 	FileCreateDir, backups
 	FormatTime, currentTime,, yyyy-MM-ddTHH-mm-ss
@@ -92,6 +88,10 @@ SaveAllToFile() {
 		FileAppend, %entryString%, Macros.txt
 	}
 	SetTimer, SaveAllToFile, Off
+}
+
+Save() {
+	SetTimer, SaveAllToFile, 1000
 }
 
 SafeReload() {
@@ -149,7 +149,7 @@ class AllEntries {
 		return 0
 	}
 
-	ReadFile() {
+	ReadFileLegacy() {
 		IfNotExist, Macros.txt
 			FileAppend,, Macros.txt
 		FileRead, macros, Macros.txt
@@ -182,6 +182,26 @@ class AllEntries {
 				} else {
 					newentry.Disable()
 				}
+			}
+		}
+
+		Save()
+	}
+
+	ReadFile() {
+		IfNotExist, Macros.txt
+			FileAppend,, Macros.txt
+		FileRead, macros, Macros.txt
+
+		data := StrSplit(macros, "`n")
+
+		; Legacy files will have entries NOT starting with Om86 or OlhvOg==
+		; Therefore this new method will fail and we need to rerun the legacy one
+		; After reading it once it should be saved using the new system so there should be no problem
+		for k,v in data {
+			if (SubStr(v, 1, 1) != "O") {
+				this.ReadFileLegacy()
+				return
 			}
 		}
 	}
