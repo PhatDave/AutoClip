@@ -472,10 +472,12 @@ class EditUI extends UI {
     }
 
     ApplySearch() {
-        uiName := this.name
-        ControlGetText, inputText, Edit1
-        EntriesSubsetFilter.filterBy(inputText)
-        this.SetAll(EntriesSubsetFilter)
+        if (this.isDefault()) {
+            uiName := this.name
+            ControlGetText, inputText, Edit1
+            EntriesSubsetFilter.filterBy(inputText)
+            this.SetAll(EntriesSubsetFilter)
+        }
     }
 
     HandleInput() {
