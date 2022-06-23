@@ -1,9 +1,9 @@
 ﻿#NoEnv
-#Warn
 SendMode Input
 SetWorkingDir %A_ScriptDir%
 #SingleInstance force
 #Persistent
+#Warn, All, Off
 
 SetBatchLines, -1
 
