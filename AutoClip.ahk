@@ -8,21 +8,21 @@ SetWorkingDir %A_ScriptDir%
 SetBatchLines, -1
 
 IfExist, mergedinclude.ahk
-    FileDelete, mergedinclude.ahk  
+    FileDelete, mergedinclude.ahk
 
-merged := "" 
-Loop, Files, %A_ScriptDir%\scripts\*.*  ; generate include file
+merged := ""
+Loop, Files, %A_ScriptDir%\scripts\*.*
 {
     FileRead, merged, %A_LoopFileFullPath%
     FileAppend, %merged%`n, mergedinclude.ahk
 }
-#Include mergedinclude.ahk
+#Include *i mergedinclude.ahk
 
 ; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
 b64Encode(string)
 {
     size := 100
-    VarSetCapacity(bin, StrPut(string, "UTF-8")) && len := StrPut(string, &bin, "UTF-8") - 1 
+    VarSetCapacity(bin, StrPut(string, "UTF-8")) && len := StrPut(string, &bin, "UTF-8") - 1
     if !(DllCall("crypt32\CryptBinaryToString", "ptr", &bin, "uint", len, "uint", 0x1, "ptr", 0, "uint*", size))
         throw Exception("CryptBinaryToString failed", -1)
     VarSetCapacity(buf, size << 1, 0)
@@ -361,7 +361,7 @@ Class Entry {
         fuckoff := this.Content
         return this.Command . "|" . this._content . "|" . this.enabled . "|" . this.GetParent()
     }
-    
+
     HasChildren() {
         index := this.children.MaxIndex()
         return index != ""
@@ -466,7 +466,7 @@ class MainUI extends UI {
 class EditUI extends UI {
     Assemble() {
         uiName := this.name
-        
+
         Gui, %uiName%:Add, Edit, r1 gApplySearch w600
         Gui, %uiName%:Add, ListView, -Multi w600 h600, Command|Content|Enabled
     }
