@@ -313,7 +313,7 @@ class EntriesSubsetFilter extends AllEntries {
 	FitsCriteria(inputStr, entry) {
 		words := StrSplit(inputStr, " ")
 		for k, v in words {
-			if (!InStr(entry._content, v)) {
+			if (!InStr(entry._content, v) and !InStr(entry.StripCommand(), v)) {
 				return false
 			}
 		}
@@ -698,7 +698,17 @@ class ToggleUI extends UI {
 	Assemble() {
 		uiName := this.name
 
+		Gui, %uiName%:Add, Edit, r1 gApplySearch w600
 		Gui, %uiName%:Add, ListView, w600 h600, Command|Content|Enabled
+	}
+
+	ApplySearch() {
+		if (this.isDefault) {
+			uiName := this.name
+			ControlGetText, inputText, Edit1
+			EntriesSubsetFilter.filterBy(inputText)
+			this.SetAll(EntriesSubsetFilter.entries)
+		}
 	}
 
 	HandleInput() {
@@ -725,13 +735,12 @@ class ToggleUI extends UI {
 		}
 	}
 
-	SetAll() {
+	SetAll(entries) {
 		this.SetDefault()
 		entries.Sort()
 
 		LV_Delete()
-		tempEntries := AllEntries.entries
-		for k, v in tempEntries {
+		for k, v in entries {
 			LV_Add("", v.StripCommand(), v.Content, v.Enabled)
 		}
 		LV_ModifyCol()
@@ -778,7 +787,7 @@ AddMacroTray() {
 }
 
 OpenRemoveMenu() {
-	RemoveUIO.SetAll()
+	RemoveUIO.SetAll(globalEntries.GetEntries())
 	RemoveUIO.Show()
 }
 
@@ -789,7 +798,7 @@ OpenModMenu() {
 }
 
 OpenToggleMenu() {
-	ToggleUIO.SetAll()
+	ToggleUIO.SetAll(globalEntries.GetEntries())
 	ToggleUIO.Show()
 }
 
@@ -804,7 +813,10 @@ MakeTrayMenu() {
 MakeTrayMenu()
 
 ApplySearch:
+	; TODO: Do this better
 	EditUIO.ApplySearch()
+	RemoveUIO.ApplySearch()
+	ToggleUIO.ApplySearch()
 return
 
 ~Esc::
