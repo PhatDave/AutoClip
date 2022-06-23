@@ -44,26 +44,41 @@ b64Decode(string)
 
 global timer := 0
 global currentDefaultUI := ""
-global backupNo := 20
+global backupNo := 150
 
 Save() {
     SetTimer, SaveAllToFile, 1000
 }
 
 BackupAll() {
-    FileCreateDir, macroBackup
-    Loop % backupNo
+    FileCreateDir, backups
+    FormatTime, currentTime,, yyyy-MM-ddTHH-mm-ss
+    target := Format("backups\{1}.txt", currentTime)
+    FileCopy, macros.txt, %target%
+
+    backups := []
+    Loop, Files, %A_ScriptDir%\backups\*.*
     {
-        test := backupNo - A_Index
-        if (test > 0) {
-            curFile := Format("macroBackup\backup{1}.txt", test)
-            prevFile := Format("macroBackup\backup{1}.txt", test - 1)
-            FileCopy, %prevFile%, %curFile%
-        } else if (test == 0) {
-            target := Format("macroBackup\backup{1}.txt", test)
-            FileCopy, macros.txt, %target%
+        backups.Insert(A_Index, A_LoopFileName)
+    }
+
+    while (backups.Length() > backupNo) {
+        DeleteFirstBackup(backups)
+    }
+}
+
+DeleteFirstBackup(backups) {
+    FormatTime, firstBackup,, yyyy-MM-ddTHH-mm-ss
+    firstBackupIndex := -1
+
+    for k, v in backups {
+        if (v < firstBackup) {
+            firstBackupIndex := k
+            firstBackup := v
         }
     }
+    FileDelete, backups\%firstBackup%
+    backups.Remove(firstBackupIndex)
 }
 
 SaveAllToFile() {
@@ -76,6 +91,11 @@ SaveAllToFile() {
     }
     file.close()
     SetTimer, SaveAllToFile, Off
+}
+
+SafeReload() {
+    SaveAllToFile()
+    reload
 }
 
 ; Source: https://www.autohotkey.com/board/topic/93570-sortarray/
@@ -611,16 +631,12 @@ OpenToggleMenu() {
     ToggleUIO.Show()
 }
 
-Reload() {
-    reload
-}
-
 MakeTrayMenu() {
     Menu, Tray, Add, Add Macro, AddMacroTray
     Menu, Tray, Add, Remove Macro, OpenRemoveMenu
     Menu, Tray, Add, Modify Macro, OpenModMenu
     Menu, Tray, Add, Toggle Macro, OpenToggleMenu
-    Menu, Tray, Add, Reload, Reload
+    Menu, Tray, Add, Reload, SafeReload
 }
 
 MakeTrayMenu()
