@@ -7,6 +7,17 @@ SetWorkingDir %A_ScriptDir%
 
 SetBatchLines, -1
 
+IfExist, mergedinclude.ahk
+    FileDelete, mergedinclude.ahk  
+
+merged := "" 
+Loop, Files, %A_ScriptDir%\scripts\*.*  ; generate include file
+{
+    FileRead, merged, %A_LoopFileFullPath%
+    FileAppend, %merged%`n, mergedinclude.ahk
+}
+#Include mergedinclude.ahk
+
 ; b64Encode and b64Decode stolen from https://github.com/jNizM/AHK_Scripts
 b64Encode(string)
 {
@@ -404,6 +415,16 @@ Class UI {
     }
 }
 
+; The plan
+; Add checkbox when adding entry to mark it as a script
+; When creating a "script" entry instead of using :o: use :oX:
+; When a script entry is added create a new ahk file whose name will resemble the entry command and save the content as a function in the file
+; Reload the script
+; Script reload will load all the entries and compile the function
+; Then replace the content with the function name
+
+; TODO:
+; Add filtering by command (in addition to content)
 class MainUI extends UI {
     Assemble() {
         uiName := this.name
