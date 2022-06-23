@@ -82,11 +82,13 @@ DeleteFirstBackup(backups) {
 }
 
 SaveAllToFile() {
-	FileDelete, Macros.txt
 	Backup()
+	FileDelete, Macros.txt
 	for k, v in entries.entries {
 		eString := v.ToString()
 		entryString := b64Encode(eString)
+		StringReplace, entryString, entryString, `r`n,,A
+		entryString .= "`r`n"
 		FileAppend, %entryString%, Macros.txt
 	}
 	SetTimer, SaveAllToFile, Off
