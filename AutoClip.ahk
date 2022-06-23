@@ -211,22 +211,23 @@ class AllEntries {
 	}
 
 	ParseLine(line) {
-		entry := False
+		; Renaming this variable to "entry" overwrites the global class Entry...
+		parsedEntry := False
 		if (StrLen(line) <= 3) {
 			return
 		}
 
 		if (SubStr(line, 1, 4) == "Om86") {
-			entry := this.ParseEntry(line)
+			parsedEntry := this.ParseEntry(line)
 		} else if (SubStr(line, 1, 8) == "OlhvOg==") {
-			entry := this.ParseScriptEntry(line)
+			parsedEntry := this.ParseScriptEntry(line)
 		}
 
-		if (!entry) {
+		if (!parsedEntry) {
 			MsgBox, BigError
 			exit
 		}
-		this.entries.Insert(entry)
+		this.entries.Insert(parsedEntry)
 	}
 
 	ParseEntry(line) {
