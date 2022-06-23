@@ -199,11 +199,56 @@ class AllEntries {
 		; Therefore this new method will fail and we need to rerun the legacy one
 		; After reading it once it should be saved using the new system so there should be no problem
 		for k,v in data {
-			if (SubStr(v, 1, 1) != "O") {
+			if (SubStr(v, 1, 1) != "O" and StrLen(v) > 3) {
 				this.ReadFileLegacy()
 				return
 			}
 		}
+
+		for k,v in data {
+			this.ParseLine(v)
+		}
+	}
+
+	ParseLine(line) {
+		entry := False
+		if (StrLen(line) <= 3) {
+			return
+		}
+
+		if (SubStr(line, 1, 4) == "Om86") {
+			entry := this.ParseEntry(line)
+		} else if (SubStr(line, 1, 8) == "OlhvOg==") {
+			entry := this.ParseScriptEntry(line)
+		}
+
+		if (!entry) {
+			MsgBox, BigError
+			exit
+		}
+		this.entries.Insert(entry)
+	}
+
+	ParseEntry(line) {
+		macro := b64Decode(line)
+		tempData := StrSplit(macro, "|")
+		rcommand := tempData[1]
+		rcontent := this.FixContent(tempData[2])
+		isenabled := tempData[3]
+		if (isenabled == "")
+			isenabled := 1
+		parent := this.Get(tempData[4])
+		newentry := new Entry(rcommand, rcontent, parent)
+		if (isenabled == 1) {
+			newentry.Enable()
+		} else {
+			newentry.Disable()
+		}
+		return newentry
+	}
+
+	ParseScriptEntry(line) {
+		; TODO Implement
 	}
 
 	FixContent(content) {
