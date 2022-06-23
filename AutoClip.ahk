@@ -650,11 +650,11 @@ class EditUI extends UI {
 	}
 
 	ApplySearch() {
-		if (this.isDefault()) {
+		if (this.isDefault) {
 			uiName := this.name
 			ControlGetText, inputText, Edit1
 			EntriesSubsetFilter.filterBy(inputText)
-			this.SetAll(EntriesSubsetFilter)
+			this.SetAll(EntriesSubsetFilter.entries)
 		}
 	}
 
@@ -676,17 +676,17 @@ class EditUI extends UI {
 		}
 	}
 
-	SetAll() {
+	SetAll(entries) {
 		this.SetDefault()
-		globalEntries.Sort()
+		entries.Sort()
 
 		LV_Delete()
-		for k, v in AllEntries.entries {
+		for k, v in entries {
 			if (InStr(v.Command, ":Xo:")) {
 				continue
 			}
 			if (!v.parent && !v.HasChildren()) {
-				LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled)
+				LV_Add("", v.StripCommand(), v.Content, v.Enabled)
 			}
 		}
 		LV_ModifyCol()
@@ -758,7 +758,7 @@ class RemoveUI extends ToggleUI {
 				LV_GetText(content, selectedRow, 2)
 				LV_GetText(enabled, selectedRow, 3)
 
-				modEntry := entries.Remove(command)
+				modEntry := globalEntries.Remove(command)
 			}
 		}
 	}
@@ -783,7 +783,7 @@ OpenRemoveMenu() {
 }
 
 OpenModMenu() {
-	EditUIO.SetAll()
+	EditUIO.SetAll(globalEntries.GetEntries())
 	EditUIO.ApplySearch()
 	EditUIO.Show()
 }
