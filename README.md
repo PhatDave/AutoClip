@@ -18,6 +18,7 @@ Right clicking the appropriate AHK icon in the system trey will bring up several
     - Brings up a menu of all active macros, clicking on any will disable that macro
 - Modify Macro
     - Brings up the same UI used to add macros but the fields are filled with the macro that was clicked on and the user may edit those values, closing the UI or hitting enter in the UI will submit the changes and update the affected macro
+    - UI also contains a search bar, search terms can be separated by a space and entries shown will include every word given
 
 ## Example usage
 
