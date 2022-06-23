@@ -33,7 +33,7 @@ b64Decode(string)
 
 global timer := 0
 global currentDefaultUI := ""
-global backupNo := 5
+global backupNo := 20
 
 Save() {
     SetTimer, SaveAllToFile, 20
