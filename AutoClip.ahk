@@ -82,8 +82,8 @@ DeleteFirstBackup(backups) {
 
 SaveAllToFile() {
 	file := FileOpen("Macros.txt", "W")
-	debugCount := entries.entries.Length()
-	for k, v in entries.entries {
+	debugCount := AllEntries.entries.Length()
+	for k, v in AllEntries.entries {
 		eString := v.ToString()
 		entryString := b64Encode(eString)
 		StringReplace, entryString, entryString, `r`n,,A
@@ -109,22 +109,25 @@ sortArray(arr,options="") {
 	new :=	[]
 	list := ""
 	For each, item in arr
-		list .=	item.Command "`n"
+		list .=	item.StripCommand() "`n"
 	list :=	Trim(list, "`n")
 	Sort, list, %options%
 	Loop, parse, list, `n, `r
-		new.Insert(entries.Get(A_LoopField))
+		new.Insert(globalEntries.Get(A_LoopField))
 	return new
-
 }
 
 class AllEntries {
 	static entries := []
 
 	Insert(entry) {
-		if !this.Get(entry.Command) {
-			this.entries.Insert(entry)
+		if !this.Get(entry.StripCommand()) {
+			AllEntries.entries.Insert(entry)
 		}
+	}
+
+	GetEntries() {
+		return AllEntries.entries
 	}
 
 	Remove(command) {
@@ -134,8 +137,8 @@ class AllEntries {
 	}
 
 	Get(command) {
-		for k, v in this.entries {
-			if v.Command == command {
+		for k, v in AllEntries.entries {
+			if v.StripCommand() == command {
 				return v
 			}
 		}
@@ -143,7 +146,7 @@ class AllEntries {
 	}
 
 	GetIndex(command) {
-		for k, v in this.entries {
+		for k, v in AllEntries.entries {
 			if v.Command == command {
 				return k
 			}
@@ -281,13 +284,13 @@ class AllEntries {
 	}
 
 	Swap(key1, key2) {
-		temp := this.entries[key1]
-		this.entries[key1] := this.entries[key2]
-		this.entries[key2] := temp
+		temp := AllEntries.entries[key1]
+		AllEntries.entries[key1] := AllEntries.entries[key2]
+		AllEntries.entries[key2] := temp
 	}
 
 	Sort() {
-		this.entries := sortArray(this.entries)
+		AllEntries.entries := sortArray(AllEntries.entries)
 	}
 }
 
@@ -295,14 +298,14 @@ class EntriesSubsetFilter extends AllEntries {
 	static entries := []
 
 	Sort() {
-		this.entries := sortArray(this.entries)
+		EntriesSubsetFilter.entries := sortArray(EntriesSubsetFilter.entries)
 	}
 
 	FilterBy(inputStr) {
-		this.entries := []
+		EntriesSubsetFilter.entries := []
 		for k, v in AllEntries.entries {
 			if (this.FitsCriteria(inputStr, v)) {
-				this.entries.Insert(k, v)
+				EntriesSubsetFilter.entries.Insert(k, v)
 			}
 		}
 	}
@@ -361,7 +364,7 @@ Class Entry {
 		this.CheckRegex()
 		this.Enabled := 0
 		this.AddParent(parent)
-		entries.Insert(this)
+		globalEntries.Insert(this)
 		return this
 	}
 
@@ -426,8 +429,13 @@ Class Entry {
 		return matches
 	}
 
+	StripCommand() {
+		temp2 := StrSplit(this.Command, ":")
+		return temp2[3]
+	}
+
 	Remove() {
-		entries.entries.RemoveAt(entries.GetIndex(this.Command))
+		AllEntries.entries.RemoveAt(globalEntries.GetIndex(this.Command))
 		if (this.parent != 0) {
 			this.parent.Remove()
 		}
@@ -498,7 +506,7 @@ class ScriptEntry extends Entry {
 		this.CheckRegex()
 		this.Content := ""
 		this.Enabled := 0
-		entries.Insert(this)
+		globalEntries.Insert(this)
 		return this
 	}
 
@@ -509,13 +517,8 @@ class ScriptEntry extends Entry {
 		return command
 	}
 
-	StripCommand() {
-		temp2 := StrSplit(this.Command, ":")
-		return temp2[3]
-	}
-
 	Remove() {
-		entries.entries.RemoveAt(entries.GetIndex(this.Command))
+		AllEntries.entries.RemoveAt(globalEntries.GetIndex(this.Command))
 		fileName := "scripts\" . this.Command . ".ahk"
 		FileDelete, %fileName%
 		this.Disable()
@@ -667,18 +670,18 @@ class EditUI extends UI {
 			LV_GetText(content, selectedRow, 2)
 			LV_GetText(enabled, selectedRow, 3)
 
-			modEntry := entries.Get(command)
+			modEntry := globalEntries.Get(command)
 			MainUIO.DisplayEntry(modEntry)
-			entries.Remove(command)
+			globalEntries.Remove(command)
 		}
 	}
 
-	SetAll(entries) {
+	SetAll() {
 		this.SetDefault()
-		entries.Sort()
+		globalEntries.Sort()
 
 		LV_Delete()
-		for k, v in entries.entries {
+		for k, v in AllEntries.entries {
 			if (InStr(v.Command, ":Xo:")) {
 				continue
 			}
@@ -727,8 +730,9 @@ class ToggleUI extends UI {
 		entries.Sort()
 
 		LV_Delete()
-		for k, v in entries.entries {
-			LV_Add("", RegExReplace(v.Command, ":o:", ""), v.Content, v.Enabled)
+		tempEntries := AllEntries.entries
+		for k, v in tempEntries {
+			LV_Add("", v.StripCommand(), v.Content, v.Enabled)
 		}
 		LV_ModifyCol()
 		Gui, Show
@@ -760,8 +764,8 @@ class RemoveUI extends ToggleUI {
 	}
 }
 
-global entries := new AllEntries()
-entries.ReadFile()
+global globalEntries := new AllEntries()
+globalEntries.ReadFile()
 
 global MainUIO := new MainUI("Main")
 global EditUIO := new EditUI("Edit")
@@ -779,7 +783,7 @@ OpenRemoveMenu() {
 }
 
 OpenModMenu() {
-	EditUIO.SetAll(entries)
+	EditUIO.SetAll()
 	EditUIO.ApplySearch()
 	EditUIO.Show()
 }
