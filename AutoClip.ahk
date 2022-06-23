@@ -672,15 +672,15 @@ ApplySearch:
 return
 
 ~Esc::
-	if (WinActive("ahk_class AutoHotkeyGUI")) {
-		UI.GetDefault().Hide()
-	}
+if (WinActive("ahk_class AutoHotkeyGUI")) {
+	UI.GetDefault().Hide()
+}
 return
 
 ~Enter::
-	if (WinActive("ahk_class AutoHotkeyGUI")) {
-		UI.GetDefault().HandleInput()
-	}
+if (WinActive("ahk_class AutoHotkeyGUI")) {
+	UI.GetDefault().HandleInput()
+}
 return
 
 GuiClose:
