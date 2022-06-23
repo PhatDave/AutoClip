@@ -50,7 +50,7 @@ Save() {
     SetTimer, SaveAllToFile, 1000
 }
 
-BackupAll() {
+Backup() {
     FileCreateDir, backups
     FormatTime, currentTime,, yyyy-MM-ddTHH-mm-ss
     target := Format("backups\{1}.txt", currentTime)
@@ -82,8 +82,8 @@ DeleteFirstBackup(backups) {
 }
 
 SaveAllToFile() {
-    BackupAll()
     file := FileOpen("Macros.txt", "W")
+    Backup()
     for k, v in entries.entries {
         eString := v.ToString()
         entryString := b64Encode(eString)
